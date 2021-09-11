@@ -1,4 +1,4 @@
-module Test
+module Vowels
   (csv,
    wordlist
   ) where
