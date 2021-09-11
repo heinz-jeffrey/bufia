@@ -9,10 +9,10 @@ import Feature
 
 -- uncomment only the one below you want to run!
 
--- import qualified Test as Language
+import qualified Vowels as Language
 -- import qualified Quechua as Language
 -- import qualified Polish as Language
-import qualified English as Language
+-- import qualified English as Language
 
 import qualified Data.Maybe as Maybe
 import qualified Data.Map.Strict as Map
