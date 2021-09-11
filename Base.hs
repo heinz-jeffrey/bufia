@@ -128,6 +128,11 @@ fromList ["aio","aiu","auo","auu","eio","eiu","euo","euu","iio","iiu","ioa","ioe
 
 -}
 
+
+--
+-- This used to be in Sequence.hs
+--
+
 -- combine xs ys z returns the list xs ++ [z] ++ ys
 combine :: [a] -> [a] -> a -> [a]
 combine left right x = left ++ x:right

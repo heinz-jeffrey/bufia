@@ -3,9 +3,16 @@
 import Base
 import qualified Table as Table
 import qualified Reduce as Reduce
-import qualified Learn as Learn
+import qualified Sequence as Sequence
+import qualified LearnExt as Learn
 import Feature 
 
+-- uncomment only the one below you want to run!
+
+import qualified Vowels as Language
+-- import qualified Quechua as Language
+-- import qualified Polish as Language
+-- import qualified English as Language
 
 import qualified Data.Maybe as Maybe
 import qualified Data.Map.Strict as Map
@@ -23,8 +30,8 @@ type Set = Set.Set
 -- We set up our basic parameters
 
 k, maxBundleSize :: Int
--- k = 3
--- maxBundleSize = 3
+k = 3
+maxBundleSize = 3
 
 -- Next we reduce the data to factors of size k Note we add word
 -- boundaries only for successor the precData is only for Quechua. It
@@ -108,7 +115,7 @@ instance DiscretePartialOrderWithMinimum Struc where
   nextGreaterThan (Struc xsl) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise] where
     adjoinLeft = Set.singleton $ Struc (minBundle:xsl)
     adjoinRight = Set.singleton $ Struc (xsl ++ [minBundle])
-    addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply nextBundles xsl)
+    addEltsPointwise = Set.map (\xs -> Struc xs) (Sequence.pointwiseApply nextBundles xsl)
   
 nextStrucStrucs :: Struc -> Set Struc
 nextStrucStrucs = nextGreaterThan

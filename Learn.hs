@@ -1,8 +1,8 @@
-module LearnExt
+module Learn
   ( learn
   ) where
 
-import ClassExt
+import Base
 import qualified PriorityQueue as Queue
 
 import qualified Data.Set as Set
