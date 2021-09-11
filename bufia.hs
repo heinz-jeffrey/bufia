@@ -1,3 +1,4 @@
+
 import System.Environment (getArgs)
 import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
                              , ArgOrder(RequireOrder)
@@ -10,7 +11,7 @@ main :: IO ()
 main = uncurry act =<< compilerOpts =<< getArgs
 
 
--- I have exactly one necessary argument the data file.
+-- There is exactly one necessary argument: the data file.
 
 act :: Options -> [String] -> IO ()
 act opts files
@@ -29,7 +30,7 @@ compilerOpts argv
                          concat errs ++ usageInfo usageHeader options
 
 usageHeader :: String
-usageHeader = "Usage: bufia [OPTION...] datafile"
+usageHeader = "Usage: bufia [OPTIONS...] datafile"
 
 printVersion :: IO ()
 printVersion = putStrLn "Version 0.1"
@@ -52,7 +53,6 @@ defaultOptions = Options
                  , opt_model         = "sl"
                  , opt_feat          = Nothing
                  }
-
 
 options :: [OptDescr (Options -> Options)]
 options
