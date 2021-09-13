@@ -53,10 +53,10 @@ learn' queue k posData negData struc visited constraints
   -- (I) whether it is contained in any remaining unaccounted negData. If so,
   -- we add it to the constraints and subtract its extension from the
   -- negData
-    
+  {-  
      | nonZeroIntersect strucExt negData =
        learn' qs k posData (Set.difference negData strucExt) hd visited (Set.insert struc constraints)
-    
+  -}
   -- (II) whether it overlaps with existing constraints. If not, we add it to
   -- the constraints and and subtract its extension from the
   -- negData
@@ -71,6 +71,7 @@ learn' queue k posData negData struc visited constraints
   | otherwise =
       learn' qs k posData negData hd (Set.insert struc visited) constraints
       --learn' qs k posData (Set.difference negData strucExt) hd visited (Set.insert struc constraints)
+
   where
     (hd,qs) = Queue.pop queue
     nextQ = nextQueue struc visited qs

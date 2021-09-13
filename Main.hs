@@ -15,66 +15,6 @@ import qualified Data.List as List
 type Map = Map.Map
 type Set = Set.Set
 
--- type Elt = Feature.Elt
--- type Sys = Feature.Sys
--- type Struc = Struc
--- type Bundle = Bundle
-
--- We set up our basic parameters
-
-k, maxBundleSize :: Int
--- k = 3
--- maxBundleSize = 3
-
--- Next we reduce the data to factors of size k Note we add word
--- boundaries only for successor the precData is only for Quechua. It
--- and other 'prec' statements should be removed when running the
--- other languages.
-
-addWBs :: [String] -> [String]
-addWBs xs = ["#"] ++ xs ++ ["#"]
-
--- succOrder = (Reduce.orderOfStr "succ") 
--- precOrder = (Reduce.orderOfStr "prec")
-
-allKgrams :: Set [String]      -- gives all strings of length k
-allKgrams = Set.fromList
-            $ map (map (:[]))
-            $ Set.toList 
-            $ (++++) (List.map Set.fromList (replicate k (symbols sys))) 
-
-succPosKgrams,precPosKgrams :: Set [String]
-succPosKgrams = Set.fromList
-                $ Reduce.toFactors Reduce.Succ k (map addWBs Language.wordlist)
-precPosKgrams = Set.fromList
-                $ Reduce.toFactors Reduce.Prec k Language.wordlist
-
-
-succPosData,precPosData :: Set Struc
-succPosData = Set.map (toStruc sys) succPosKgrams
-precPosData = Set.map (toStruc sys) precPosKgrams
-
-succNegData,precNegData :: Set [String]
-succNegData = Set.difference allKgrams succPosKgrams
-precNegData = Set.difference allKgrams precPosKgrams
-
--- These run the learner
-
-precGrammar = Learn.learn k precPosData precNegData minStruc
-succGrammar = Learn.learn k succPosData succNegData minStruc
-
--- our main function prints the results.
-
-main = do
---  putStrLn "=====Forbidden Precedence Structures=====\n"
---  putStrLn (Feature.strucSetToStr precGrammar) -- for pretty printing
--- putStrLn (show precGrammar) -- for future usage if we later want to 'read' the grammar and use it
---  putStrLn "\n\n"
-
-  putStrLn "=====Forbidden Successor Structures=====\n"
-  putStrLn (Feature.strucSetToStr succGrammar) -- for pretty printing
-  -- putStrLn (show succGrammar) -- for future usage if we later want to 'read' the grammar and use it
-
 --
 -- BETTER NOT TO MESS WITH ANYTHING BELOW HERE
 --
@@ -89,16 +29,6 @@ instance DiscretePartialOrderWithMinimum Bundle where
   nextGreaterThan b@(Bundle xs) = exciseNothings (Set.map f (unifiableElts sys b))
     where f elt = insertBundleMaybe maxBundleSize elt b
 
-nextBundles :: Bundle -> Set Bundle
-nextBundles = nextGreaterThan
-
-strucIsPrefixOf :: Struc -> Struc -> Bool
-strucIsPrefixOf (Struc []) _                  =  True
-strucIsPrefixOf _ (Struc [])                  =  False
-strucIsPrefixOf (Struc (x:xs)) (Struc (y:ys)) = x <:< y && strucIsPrefixOf (Struc xs) (Struc ys)
-
-strucIsInfixOf :: Struc -> Struc -> Bool
-strucIsInfixOf needle (Struc haystack) = any (strucIsPrefixOf needle) (List.map (\x -> Struc x) (List.tails haystack))
 
 instance DiscretePartialOrderWithMinimum Struc where
   minimum = minStruc
@@ -113,7 +43,6 @@ instance DiscretePartialOrderWithMinimum Struc where
 nextStrucStrucs :: Struc -> Set Struc
 nextStrucStrucs = nextGreaterThan
 
-  
 
 --
 -- Our grammars will be of type Set Struc

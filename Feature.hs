@@ -235,6 +235,26 @@ insertBundleMaybe maxBundleSize x (Bundle xs)
   | otherwise = Just (Bundle (Set.insert x xs))
 
 
+-- nextBundles :: Bundle -> Set Bundle
+-- nextBundles = nextGreaterThan
+
+strucIsPrefixOf :: Struc -> Struc -> Bool
+strucIsPrefixOf (Struc []) _                  =  True
+strucIsPrefixOf _ (Struc [])                  =  False
+strucIsPrefixOf (Struc (x:xs)) (Struc (y:ys)) = x <:< y && strucIsPrefixOf (Struc xs) (Struc ys)
+
+strucIsInfixOf :: Struc -> Struc -> Bool
+strucIsInfixOf needle (Struc haystack) = any (strucIsPrefixOf needle) (List.map (\x -> Struc x) (List.tails haystack))
+
+
+instance DiscretePartialOrderWithMinimum Bundle where
+  minimum = minBundle
+  size (Bundle xs) = Set.size xs
+  (<:<) (Bundle xs) (Bundle ys) = Set.isSubsetOf xs ys
+  nextGreaterThan b@(Bundle xs) = exciseNothings (Set.map f (unifiableElts sys b))
+    where f elt = insertBundleMaybe maxBundleSize elt b
+
+
 --
 -- Structures
 --

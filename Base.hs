@@ -3,7 +3,7 @@ module Base where
 import Data.Set as Set
 import Data.Map.Strict as Map
 import Data.List as List
-import Data.Maybe
+import Data.Maybe 
 
 -- https://wiki.haskell.org/Memoization
 -- class Memoizable a where
@@ -165,3 +165,29 @@ pointwiseApply f word = List.foldl'
                         (\ys (x,n) -> Set.union (dosomething f x n word) ys)
                         Set.empty
                         (indexWord word)
+
+
+addWBs :: [String] -> [String]
+addWBs xs = ["#"] ++ xs ++ ["#"]
+
+data Order = Succ | Prec
+
+orderOfStr :: String -> Order
+orderOfStr "prec" = Prec
+orderOfStr "succ" = Succ
+orderOfStr "sp" = Prec
+orderOfStr "sl" = Succ
+orderOfStr _ = error "Reduce.hs: orderOfStr"
+
+extract :: Order -> ([a] -> [[a]])
+extract Prec = List.subsequences
+extract Succ = concat . List.map List.tails . List.inits
+
+factors' :: Ord a => Order -> Int -> [a] -> Set [a]
+factors' order k = Set.filter (\w -> length w == k) . Set.fromList . extract order
+
+factors :: Ord a => Order -> Int -> [[a]] -> Set [a]
+factors order k = List.foldl' Set.union Set.empty . List.map (factors' order k)
+
+toFactors :: Ord a => Order -> Int -> [[a]] -> [[a]]
+toFactors order k = Set.toList . factors order k
