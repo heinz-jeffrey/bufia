@@ -191,3 +191,12 @@ factors order k = List.foldl' Set.union Set.empty . List.map (factors' order k)
 
 toFactors :: Ord a => Order -> Int -> [[a]] -> [[a]]
 toFactors order k = Set.toList . factors order k
+
+
+
+
+compareByIndex :: Eq a => [a] -> a -> a -> Ordering
+compareByIndex xs x1 x2 = compare i1 i2
+  where i1 = fromJust (List.elemIndex x1 xs)
+        i2 = fromJust (List.elemIndex x2 xs)
+
