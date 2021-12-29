@@ -17,7 +17,7 @@ type Table = [(String,String,String)]
 ofStr :: String -> Table
 ofStr =
    lines          >.>  -- String -> [String], creates a list at newlines
-   Split.cleanup  >.>  -- [String] -> [String],   removes tabs and spaces
+   Split.cleanup  >.>  -- [String] -> [String], removes tabs and spaces
    splitLines     >.>  -- [String] -> [[String]], creates a list at commas
    prepRowCols    >.>  -- [[String]] -> ([String],[String],[[String]])
    rowColVals     >.>  -- ([String],[String],[[String]]) -> [(String,String,String)] this produces (row,col,val)
