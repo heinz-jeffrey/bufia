@@ -61,7 +61,6 @@ third elementi is the list of constraints it violates.
 > showEval :: Order -> ([String], Int, [Struc]) -> String
 > showEval ord (x,n,vs) = intercalate "\t" [stringify x, show n, Struc.listHshow vs]
 
-
 newtype OrdStruc = SuccStruc Struc
 newtype PrecStruc = PrecStruc Struc
 

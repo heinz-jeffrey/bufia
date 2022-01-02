@@ -74,6 +74,13 @@ care about the zero-valued features
 >   | 1 + (Set.size xs) > maxBundleSize = Nothing
 >   | otherwise = Just (Bundle (Set.insert x xs))
 
+> bundleNextGreater' :: Sys -> Int -> Bundle -> Set Bundle
+> bundleNextGreater' sys maxBundleSize b = exciseNothings (Set.map f (unifiableElts sys b))
+>   where f elt = insertBundleMaybe maxBundleSize elt b
+
+> bundleNextGreater :: Sys -> Bundle -> Set Bundle
+> bundleNextGreater sys b@(Bundle xs) = Set.map f (unifiableElts sys b)
+>   where f elt = Bundle $ Set.insert elt xs
 
 > bundleIsLessThan :: Bundle -> Bundle -> Bool
 > bundleIsLessThan (Bundle xs) (Bundle ys) = xs `Set.isSubsetOf` ys
@@ -94,7 +101,7 @@ Structures
 > hshow (Struc xs) = concat (map hshowBundle xs)
 
 > listHshow :: [Struc] -> String
-> listHshow = List.intercalate "" . List.map hshow 
+> listHshow = List.intercalate ";" . List.map hshow 
 
 > setHshow :: Set Struc -> String
 > setHshow = List.intercalate "\n" . List.map hshow . Set.toList 
@@ -127,6 +134,20 @@ maybe this should be called minMatchingStrings?
 > minExtension sys (Struc []) = Set.empty
 > minExtension sys (Struc (b:[])) = Set.map (:[]) (bundleExtension sys b)
 > minExtension sys (Struc (b:bs)) =  minExtension sys (Struc [b]) +++ minExtension sys (Struc bs)
+
+-- > kExtension :: Sys -> Order -> Int -> Struc -> Set [Symbol]
+-- > kExtension sys ord k (Struc xs)
+-- >   | length xs >  k = Set.empty
+-- >   | length xs == k = minExt
+-- >   | ord == Prec    = kPrecExtend sys k minExt
+-- >   | ord == Succ    = kSuccExtend sys k minExt
+-- >   where minExt = minExtension sys (Struc xs) 
+
+-- > kSuccExtend :: Sys -> Int -> Set [Symbol] -> Set [Symbol]
+-- > kSuccExtend sys k ws = infixate ...
+
+-- > kPrecExtend :: Sys -> Int -> Set [Symbol] -> Set [Symbol]
+-- > kPrecExtend sys k ws = subsequate ...
 
 getElts maps a string (symbol) to the set of features it has
 given by the feature system.
@@ -168,6 +189,20 @@ We lift changeStructure to change a wordlist to a set of structures
 > isLessThan :: Order -> Struc -> Struc -> Bool
 > isLessThan Succ = strucIsInfixOf
 > isLessThan Prec = strucIsSubsequenceOf
+
+> nextGreater' :: Sys -> Int -> Struc -> Set Struc
+> nextGreater' sys maxBundleSize (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
+>   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
+>         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
+>         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater' sys maxBundleSize) bs)
+
+> nextGreater :: Sys -> Struc -> Set Struc
+> nextGreater sys (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
+>   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
+>         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
+>         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater sys) bs)
+
+
 
 For Testing
 

@@ -33,7 +33,6 @@ x >:> ys is True iff any y is less than x (any y is contained in x)
 >     where
 >       foldfunction y bool = bool || (y <:< x)
 
-
 `close f xs` returns the closure of xs under f.
 It assumes f is monotonically increasing
 and that there is a ceiling.
@@ -49,6 +48,9 @@ and that there is a ceiling.
 >   | Map.null nextMap = List.foldl' Map.union Map.empty maplist 
 >   | otherwise = closeMap f (nextMap:maplist)
 >   where nextMap = f (head maplist)
+
+> zeroIntersect :: Ord a => Set a -> Set a -> Bool
+> zeroIntersect xs ys = Set.null (Set.intersection xs ys)
 
 `findUpdate f key map` looks up the data associated with key in map
 and returns the pair (data,map). If Nothing is found, it computes
@@ -107,10 +109,12 @@ Returns the concatenation of a list of languages.
 > (++++) [] = Set.empty
 > (++++) xs = List.foldl' (+++) (Set.singleton []) xs
 
-alph = ['a' .. 'd']
-alphs = List.map (:[]) alph
-alphs' = List.map (:[]) alphs
-alphs3 = (++++) (List.map Set.fromList (replicate 3 alphs')) -- gives all strings of length 3
+Returns the set of all sequences of length k from a given list of symbols
+
+> kStrings :: Ord a => Int -> [a] -> Set [a]
+> kStrings k alph = (++++) (List.map Set.fromList (replicate k alph'))
+>   where alph' = List.map (:[]) alph
+
 
 > pairsThatSumTo :: Int -> [(Int,Int)]
 > pairsThatSumTo k = [ (x,y) | x <- [0..k], y <- [0..k], x + y == k ]

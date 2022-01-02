@@ -6,7 +6,9 @@ module Vowels
 csv,bcsv :: String
 csv = ",i,u,e,o,a\nhigh,+,+,-,-,-\nback,-,+,-,+,-\nlow,-,-,-,-,+"
 bcsv = ",i,u,e,o,a,#\nhigh,+,+,-,-,-,-\nback,-,+,-,+,-,-\nlow,-,-,-,-,+,-\nboundary,-,-,-,-,-,+"
+datastring = "i i\na a\ne o"
 
+  
 wordlist :: [[String]]
 wordlist = [["i","i"],
             -- ["i","u"],  [+back]

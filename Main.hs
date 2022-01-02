@@ -64,4 +64,3 @@ instance Grammar Struc where
                   $ map (map (bundleExtension sys))
                   $ infixate minBundle (unStruc struc) k
 
-    
