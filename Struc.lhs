@@ -114,7 +114,10 @@ Structures
 > setHread = Set.fromList . map Struc.hread . lines 
 
 > minStruc :: Struc
-> minStruc = Struc []
+> minStruc = Struc [minBundle]
+
+> size :: Struc -> Int
+> size (Struc bs) = length bs
 
 > instance Ord Struc where
 >   compare (Struc xsl) (Struc ysl)
@@ -189,6 +192,9 @@ We lift changeStructure to change a wordlist to a set of structures
 > isLessThan :: Order -> Struc -> Struc -> Bool
 > isLessThan Succ = strucIsInfixOf
 > isLessThan Prec = strucIsSubsequenceOf
+
+
+
 
 > nextGreater' :: Sys -> Int -> Struc -> Set Struc
 > nextGreater' sys maxBundleSize (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]

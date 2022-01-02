@@ -19,19 +19,19 @@ x <:< y is True iff x is less than y (structure x is contained within structure 
 x <:< ys is True iff x is less than any element of y (structure x is contained within any structure y)
 x >:> ys is True iff any y is less than x (any y is contained in x)
 
-> class (Eq a) => DiscretePartialOrderWithMinimum a where
->   minimum :: a
->   size :: a -> Int
->   (<:<) :: a -> a -> Bool            
->   nextGreaterThan :: a -> Set a      
->   (<::<) :: a -> Set a -> Bool       
->   (>::>) :: a -> Set a -> Bool       
->   (<::<) x ys = Set.foldr' foldfunction False ys
->     where
->       foldfunction y bool = bool || (x <:< y) 
->   (>::>) x ys = Set.foldr' foldfunction False ys
->     where
->       foldfunction y bool = bool || (y <:< x)
+-- > class (Eq a) => DiscretePartialOrderWithMinimum a where
+-- >   minimum :: a
+-- >   size :: a -> Int
+-- >   (<:<) :: a -> a -> Bool            
+-- >   nextGreaterThan :: a -> Set a      
+-- >   (<::<) :: a -> Set a -> Bool       
+-- >   (>::>) :: a -> Set a -> Bool       
+-- >   (<::<) x ys = Set.foldr' foldfunction False ys
+-- >     where
+-- >       foldfunction y bool = bool || (x <:< y) 
+-- >   (>::>) x ys = Set.foldr' foldfunction False ys
+-- >     where
+-- >       foldfunction y bool = bool || (y <:< x)
 
 `close f xs` returns the closure of xs under f.
 It assumes f is monotonically increasing
@@ -191,6 +191,8 @@ addWBs xs = ["#"] ++ xs ++ ["#"]
 > orderOfStr :: String -> Order
 > orderOfStr "prec" = Prec
 > orderOfStr "succ" = Succ
+> orderOfStr "Prec" = Prec
+> orderOfStr "Succ" = Succ
 > orderOfStr "sp" = Prec
 > orderOfStr "sl" = Succ
 > orderOfStr _ = error "Reduce.hs: orderOfStr"
@@ -210,6 +212,10 @@ addWBs xs = ["#"] ++ xs ++ ["#"]
 
 `toFactors Succ k (==)` returns all subfactors (successor model) of size k
 `toFactors Succ k (<=)` returns all subfactors (successor model) up to size k inclusive
+
+> reduceWords :: Ord a => Order -> Int -> [[a]] -> [[a]]
+> reduceWords order k ws = short ++ toFactors order k (==) long
+>                          where (short,long) = List.partition (\w -> length w < k) ws
 
 > compareByIndex :: Eq a => [a] -> a -> a -> Ordering
 > compareByIndex xs x1 x2 = compare i1 i2
