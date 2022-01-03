@@ -31,7 +31,7 @@ ff = feature file
 o = order
 k  = factor width
 n  = bundle depth
-a  = abductiv principle code
+a  = abductive principle code
 
 >   where f (wf:ff:oStr:kStr:nStr:aStr:[]) = main' wf ff oStr kStr nStr aStr
 >         f _ = return $ unlines
@@ -83,7 +83,7 @@ a  = abductiv principle code
 >         | Queue.isEmpty queue                                                           --(1)
 >         || Struc.size struc > k = constraints
 >         | struc >::> constraints = learn qs negData hd visited constraints              --(2)
->         | struc <::< pd = learn nextQ negData hd (Set.insert struc visited) constraints    --(3)
+>         | struc <::< pd = learn nextQ negData hd (Set.insert struc visited) constraints --(3)
 >         | a == 0 = learn qs negData hd visited (Set.insert struc constraints)           --(4)
 >         | a == 1                                                                        --(5)
 >           && not (Set.isSubsetOf strucExt negData) =
@@ -91,7 +91,7 @@ a  = abductiv principle code
 >         | a == 2                                                                        --(6)
 >           && zeroIntersect strucExt negData =
 >           learn qs (Set.union negData strucExt) hd visited (Set.insert struc constraints) 
->         | otherwise = learn nextQ negData hd (Set.insert struc visited) constraints        --(7)
+>         | otherwise = learn nextQ negData hd (Set.insert struc visited) constraints     --(7)
 >         where
 >           (hd,qs)    = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited

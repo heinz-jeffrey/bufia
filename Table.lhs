@@ -14,7 +14,11 @@
 >   ) where
 
 > import qualified Split as Split
-> import qualified Data.Set as Set
+
+import qualified Data.Set as Set
+
+> import Data.List (nub)
+
 
 > sep = ','
 
@@ -35,17 +39,17 @@
 
 settify removes duplicates and sorts lists
 
-> settify :: Ord a => [a] -> [a]
-> settify = Set.toList . Set.fromList 
+settify :: Ord a => [a] -> [a]
+settify = Set.toList . Set.fromList 
 
 > colNames :: Table -> [String]
-> colNames = settify . map (\(c,_,_) -> c)
+> colNames = nub . map (\(c,_,_) -> c)
 
 > rowNames :: Table -> [String]
-> rowNames = settify . map (\(_,r,_) -> r)
+> rowNames = nub . map (\(_,r,_) -> r)
 
 > values :: Table -> [String]
-> values = settify . map (\(_,_,v) -> v)
+> values = nub . map (\(_,_,v) -> v)
 
 > splitLines :: [String] -> [[String]]
 > splitLines = map (Split.bySep sep)

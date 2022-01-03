@@ -98,14 +98,14 @@ compiled information from a feature table
 >   where syms  = Table.colNames t
 >         feats = Table.rowNames t
 >         vals  = Table.values t
->         elts  = makeElts t feats vals
+>         elts  = makeElts feats vals
 >         clmap = makeClassMap t
 
 > hread :: String -> Sys
 > hread = ofTable . Table.hread
 
-> makeElts :: Table -> [String] -> [String] -> [Elt]
-> makeElts t fs vs = map eltFromPair [ (f,v) | f <- fs, v <- vs]
+> makeElts :: [String] -> [String] -> [Elt]
+> makeElts fs vs = map eltFromPair [ (f,v) | f <- fs, v <- vs]
 
 > addSymElt :: Map String (Set Elt) -> (String,String,String) -> Map String (Set Elt)
 > addSymElt m (s,f,v) = 
@@ -205,3 +205,25 @@ if e1 is unifiable with e2 we add e2 to the set of elements compatible with e1.
 
 > nonZeroElts :: Sys -> Set Elt
 > nonZeroElts sys = removeZeroElts $ Set.fromList (elements sys)
+
+
+Ordering Features
+
+> compareFeatures :: Sys -> String -> String -> Ordering
+> compareFeatures sys = compareByIndex (features sys)
+
+> compareValues :: Sys -> String -> String -> Ordering
+> compareValues sys = compareByIndex (values sys)
+
+> compareElt :: Sys -> Elt -> Elt -> Ordering
+> compareElt sys e1 e2 =
+>   if featureComparison == EQ
+>   then compareValues sys (value e1) (value e2)
+>   else featureComparison
+>   where featureComparison =
+>           compareFeatures sys (feature e1) (feature e2)
+
+> maxElt :: Sys -> Elt -> Elt -> Elt
+> maxElt sys e1 e2 =
+>   if compareElt sys e1 e2 == LT
+>   then e2 else e1

@@ -217,6 +217,8 @@ addWBs xs = ["#"] ++ xs ++ ["#"]
 > reduceWords order k ws = short ++ toFactors order k (==) long
 >                          where (short,long) = List.partition (\w -> length w < k) ws
 
+compareByIndex assumes x1 and x2 are elements of xs
+
 > compareByIndex :: Eq a => [a] -> a -> a -> Ordering
 > compareByIndex xs x1 x2 = compare i1 i2
 >   where i1 = fromJust (List.elemIndex x1 xs)

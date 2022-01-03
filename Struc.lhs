@@ -63,24 +63,33 @@ maybe this should be called bundleMatchingSymbols?
 > findUnifiable sys elts elt = Set.intersection elts (lookupUnifiable sys elt)
 
 Note we remove the zero-valued features because lookupUnifiable
-will return Set.emtpty for elements not in unifyMap and we don't
+will return Set.empty for elements not in unifyMap and we don't
 care about the zero-valued features
 
 > unifiableElts :: Sys -> Bundle -> Set Elt
-> unifiableElts sys (Bundle elts) = Set.foldl' (findUnifiable sys) (nonZeroElts sys) (removeZeroElts elts)
+> unifiableElts sys (Bundle elts) =
+>   Set.foldl' (findUnifiable sys) (nonZeroElts sys) (removeZeroElts elts)
 
 > insertBundleMaybe :: Int -> Elt -> Bundle -> Maybe Bundle
 > insertBundleMaybe maxBundleSize x (Bundle xs)
 >   | 1 + (Set.size xs) > maxBundleSize = Nothing
 >   | otherwise = Just (Bundle (Set.insert x xs))
 
+bundleNextGreater' takes an Int and will not add features to a bundle
+if it would then exceed the max bundle size.
+
 > bundleNextGreater' :: Sys -> Int -> Bundle -> Set Bundle
-> bundleNextGreater' sys maxBundleSize b = exciseNothings (Set.map f (unifiableElts sys b))
->   where f elt = insertBundleMaybe maxBundleSize elt b
+> bundleNextGreater' sys maxBundleSize b = exciseNothings eltsToAdd
+>   where eltsToAdd = Set.map f (unifiableElts sys b)
+>         f elt = insertBundleMaybe maxBundleSize elt b
+>         
+
+bundleNextGreater has no restriction on size.
 
 > bundleNextGreater :: Sys -> Bundle -> Set Bundle
-> bundleNextGreater sys b@(Bundle xs) = Set.map f (unifiableElts sys b)
+> bundleNextGreater sys b@(Bundle xs) = Set.map f eltsToAdd
 >   where f elt = Bundle $ Set.insert elt xs
+>         eltsToAdd = unifiableElts sys b
 
 > bundleIsLessThan :: Bundle -> Bundle -> Bool
 > bundleIsLessThan (Bundle xs) (Bundle ys) = xs `Set.isSubsetOf` ys
@@ -89,7 +98,9 @@ care about the zero-valued features
 > bundleIsLessThanExt sys xs ys = (bundleExtension sys xs) `Set.isSubsetOf` (bundleExtension sys ys)
 
 
+==========
 Structures
+==========
 
 
 > data Struc = Struc [Bundle] deriving (Eq, Show, Read)
