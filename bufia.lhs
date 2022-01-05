@@ -36,11 +36,11 @@
 >     | optShowUsage opts            = printUsage
 >     | not (elem (opt_order opts)
 >            ["sl","sp","succ","prec","Succ","Prec"])
->       = putStrLn "x1" >> printUsage >> exitFailure
+>       = printUsage >> exitFailure
 >     | opt_a opts > 2
->       || opt_a opts < 0            = putStrLn "x2" >> printUsage >> exitFailure
->     | null files                   = putStrLn "x3" >> printUsage >> exitFailure
->     | not . null $ drop 2 files    = putStrLn "x4" >> putStrLn (files !! 0) >> putStrLn (files !! 1) >> putStrLn (files !! 2) >> printUsage >> exitFailure
+>       || opt_a opts < 0            = printUsage >> exitFailure
+>     | null files                   = printUsage >> exitFailure
+>     | not . null $ drop 2 files    = printUsage >> exitFailure
 >     | otherwise                    = do
 >         wStr <- readFile (files !! 0)
 >         fStr <- readFile (files !! 1)             
@@ -169,3 +169,34 @@
 >           nextQ      = Queue.pushMany (Set.toList nextStrucs) qs
 >           strucExt   = Set.filter (filterf ord (Struc.minExtension sys struc)) kws
 >     in learn' initialQ Set.empty minFactor Set.empty Set.empty
+
+
+
+     (1) We stop if any of the following conditions are met:
+      * the Queue is empty we stop.
+      * if the struc is larger than k (since all subsequent strucs will also be larger than k)
+
+     (2) if any constraint is contained within the struc then we leave it and move on
+
+     (3) if the struc is contained in the positive data then we add it to
+     the visited structures (= not in the grammar) and move on
+
+     (4) Now the struc is not in the positive data and not already
+     subsumed by an existing constraint so next we check which abductive principle applies
+
+     if abductive principle 0 is selected then we add the struc to the
+     constraints and we can ignore the negData
+
+     (5) if abductive principle 1 is selected then we care
+     whether the struc accounts for any new negData. If so, we add
+     it to the constraints and add its extension to the negData
+
+     (6) if abductive principle 2 is selected then we care
+     whether the struc only account for new negData. If so, we add it to
+     the constraints and and add its extension to the negData
+
+     (7) Otherwise we have abdutive principle 1 or 2 AND the extension of
+     struc is either already subsumed by the current grammar (1) or
+     its extension overlaps with the current grammar (2) and will be
+     skipped. Therefore we add the struc to the set of visited
+     structures and move on
