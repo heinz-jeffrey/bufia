@@ -122,11 +122,29 @@ Returns the set of all sequences of length k from a given list of symbols
 > padByPair :: a -> [a] -> (Int,Int) -> [a]
 > padByPair pad xs (left,right) = (replicate left pad) ++ xs ++ (replicate right pad)
 
-> infixate :: a -> [a] -> Int -> [[a]]
-> infixate pad xs k = List.map (padByPair pad xs) (pairsThatSumTo (k - length xs))
 
-infixate "x" ["a","b","c"] 5
+> infixate :: Eq a => a -> Int -> [a] -> [[a]]
+> infixate pad k xs = List.nub $ List.map (padByPair pad xs) (pairsThatSumTo k)
+
+ghci> infixate "x" ["a","b","c"] 2
 [["a","b","c","x","x"],["x","a","b","c","x"],["x","x","a","b","c"]]
+
+> subseqate :: a -> Int -> [a] ->  [[a]]
+
+> subseqate _ 0 xs = [xs]
+> subseqate pad k [] = [List.take k $ repeat pad]
+> subseqate pad k (x:xs) = concat $ List.map f [0 .. k]
+>   where f 0 = List.map (x:) (subseqate pad k xs)
+>         f n = List.map ((List.take n $ repeat pad) ++)  (List.map (x:) (subseqate pad (k-n) xs))
+
+> expandWith :: Eq a => Order -> a -> Int -> [a] -> [[a]]
+> expandWith Succ = infixate
+> expandWith Prec = subseqate
+
+ghci> subseqate 'x' "ab" 3
+["abxxx","axbxx","axxbx","axxxb","xabxx","xaxbx","xaxxb","xxabx","xxaxb","xxxab"]
+
+
 
 {-
 *Feature> map (map (bundleExtension sys)) $ infixate ((head . unStruc) s0') (unStruc s1) 3
@@ -186,7 +204,7 @@ then used to produce a new list which is added to the set.
 addWBs :: [String] -> [String]
 addWBs xs = ["#"] ++ xs ++ ["#"]
 
-> data Order = Succ | Prec
+> data Order = Succ | Prec deriving (Eq, Show)
 
 > orderOfStr :: String -> Order
 > orderOfStr "prec" = Prec
@@ -218,9 +236,10 @@ addWBs xs = ["#"] ++ xs ++ ["#"]
 >                          where (short,long) = List.partition (\w -> length w < k) ws
 
 compareByIndex assumes x1 and x2 are elements of xs
+`compareByIndex x1 x2` == GT iff x1 occurs EARLIER in the list
 
 > compareByIndex :: Eq a => [a] -> a -> a -> Ordering
-> compareByIndex xs x1 x2 = compare i1 i2
+> compareByIndex xs x1 x2 = compare i2 i1
 >   where i1 = fromJust (List.elemIndex x1 xs)
 >         i2 = fromJust (List.elemIndex x2 xs)
 

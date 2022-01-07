@@ -40,6 +40,11 @@ We use `data` instead of `type` because we want to create our own instance of Or
 > minBundle :: Bundle
 > minBundle = Bundle Set.empty
 
+bundleMaxElt must be non-empty...
+
+> bundleMaxElt :: Sys -> Bundle -> Elt
+> bundleMaxElt sys b = (last . List.sortBy (compareElt sys) . Set.elems . unBundle) b
+
 maybe this should be called bundleMatchingSymbols?
 
 > bundleExtension :: Sys -> Bundle -> Set Symbol
@@ -78,18 +83,40 @@ care about the zero-valued features
 bundleNextGreater' takes an Int and will not add features to a bundle
 if it would then exceed the max bundle size.
 
+ eltsToAdd
+
 > bundleNextGreater' :: Sys -> Int -> Bundle -> Set Bundle
-> bundleNextGreater' sys maxBundleSize b = exciseNothings eltsToAdd
->   where eltsToAdd = Set.map f (unifiableElts sys b)
->         f elt = insertBundleMaybe maxBundleSize elt b
->         
+> bundleNextGreater' sys maxBundleSize b = exciseNothings $ Set.map f eltsToAdd
+>   where f elt     = insertBundleMaybe maxBundleSize elt b
+>         eltsToAdd = uElts
+
+-- >         eltsToAdd = Set.intersection uElts (Set.fromList gElts)
+
+>         uElts     = unifiableElts sys b
+
+-- >         gElts     = if b == minBundle
+-- >                     then elements sys
+-- >                     else greaterElts sys $ bundleMaxElt sys b
+
+
+-- bundleNextGreater also only adds elements that are greater than the
+-- largest element in the bundle.
 
 bundleNextGreater has no restriction on size.
 
 > bundleNextGreater :: Sys -> Bundle -> Set Bundle
 > bundleNextGreater sys b@(Bundle xs) = Set.map f eltsToAdd
->   where f elt = Bundle $ Set.insert elt xs
->         eltsToAdd = unifiableElts sys b
+>   where f elt     = Bundle $ Set.insert elt xs
+>         eltsToAdd = uElts
+
+-- >         eltsToAdd = Set.intersection uElts (Set.fromList gElts)
+
+>         uElts     = unifiableElts sys b
+
+-- >         gElts     = if b == minBundle
+-- >                     then elements sys
+-- >                     else greaterElts sys $ bundleMaxElt sys b
+
 
 > bundleIsLessThan :: Bundle -> Bundle -> Bool
 > bundleIsLessThan (Bundle xs) (Bundle ys) = xs `Set.isSubsetOf` ys
@@ -204,9 +231,6 @@ We lift changeStructure to change a wordlist to a set of structures
 > isLessThan Succ = strucIsInfixOf
 > isLessThan Prec = strucIsSubsequenceOf
 
-
-
-
 > nextGreater' :: Sys -> Int -> Struc -> Set Struc
 > nextGreater' sys maxBundleSize (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
 >   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
@@ -218,6 +242,21 @@ We lift changeStructure to change a wordlist to a set of structures
 >   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
 >         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
 >         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater sys) bs)
+
+
+`extension ord sys k x` gives the set of words of size k that match struc x. 
+
+> extension :: Order -> Sys -> Int -> Struc -> Set [Symbol]
+> extension ord sys k x
+>   | k < Struc.size x  = minExtension sys x
+>   | otherwise         = Set.fromList $ concat (f x)
+>   where bs  = unStruc x
+>         n   = k - length bs
+>         f x = List.map Set.elems
+>               . List.map (minExtension sys)    -- :: [Set [Symbol]]
+>               . List.map Struc                 -- :: [Struc]
+>               $ expandWith ord minBundle n bs  -- :: [[Symbols]]
+
 
 
 

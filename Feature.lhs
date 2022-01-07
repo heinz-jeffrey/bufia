@@ -227,3 +227,6 @@ Ordering Features
 > maxElt sys e1 e2 =
 >   if compareElt sys e1 e2 == LT
 >   then e2 else e1
+
+> greaterElts :: Sys -> Elt -> [Elt]
+> greaterElts sys elt = tail $ List.dropWhile (/= elt) (elements sys)

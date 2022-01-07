@@ -34,9 +34,6 @@
 > act opts files
 >     | optShowVersion opts          = printVersion
 >     | optShowUsage opts            = printUsage
->     | not (elem (opt_order opts)
->            ["sl","sp","succ","prec","Succ","Prec"])
->       = printUsage >> exitFailure
 >     | opt_a opts > 2
 >       || opt_a opts < 0            = printUsage >> exitFailure
 >     | null files                   = printUsage >> exitFailure
@@ -59,7 +56,7 @@
 > usageHeader = "Usage: bufia [OPTIONS...] wordfile featurefile"
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 0.9"
+> printVersion = putStrLn "Version 0.92"
 
 > data Options = Options
 >   {optShowVersion   :: Bool
@@ -67,7 +64,9 @@
 >    , opt_k          :: Int
 >    , opt_n          :: Int
 >    , opt_a          :: Int
->    , opt_order      :: String
+>    , opt_m          :: Maybe Int
+>    , opt_b          :: Bool
+>    , opt_order      :: Order
 >   } deriving Show
 
 > defaultOptions :: Options
@@ -77,7 +76,9 @@
 >                  , opt_k             = 2
 >                  , opt_n             = 3
 >                  , opt_a             = 1
->                  , opt_order         = "succ"
+>                  , opt_m             = Nothing
+>                  , opt_b             = False
+>                  , opt_order         = Succ
 >                  }
 
 > options :: [OptDescr (Options -> Options)]
@@ -85,27 +86,39 @@
 >     = [ Option ['k'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_k = read f })
->                 "INT"
+>                 "Int"
 >         )
 >         "the max factor width (k-value)"
 >       , Option ['n'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_n = read f })
->                 "INT"
+>                 "Int"
 >         )
 >         "the max number of features in a bundle"
 >       , Option ['a'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_a = read f })
->                 "INT"
+>                 "Int"
 >         )
 >         "which abductive principle to use {0,1,2}"
+>       , Option ['m'] []
+>         (ReqArg (\f opts ->
+>                  opts { opt_m = Just (read f :: Int) })
+>                 "Maybe Int"
+>         )
+>         "the max number of constraints to return (default None)"
+>       , Option ['b'] []
+>         (ReqArg (\f opts ->
+>                  opts { opt_b = read f })
+>                 "Bool"
+>         )
+>         "If 'True' then boundaries '#' are added to all words"
 >       , Option ['o'] ["order"]
 >         (ReqArg (\f opts ->
->                  opts { opt_order = f })
->                 "ORDER"
+>                  opts { opt_order = orderOfStr f })
+>                 "Order"
 >         )
->         "the order of the model {succ,prec}"
+>         "the order of the model: 'succ' or 'prec'"
 >       , Option ['h','?'] []
 >         (NoArg (\opts -> opts { optShowUsage = True }))
 >         "show this help"
@@ -114,7 +127,9 @@
 >         "show version number"
 >       ]
 
-
+> addwbs :: Bool -> [String] -> [String]
+> addwbs False xs = xs
+> addwbs True xs = ("#":xs) ++ ["#"]
 
 > learn :: String
 >       -> String
@@ -128,22 +143,27 @@
 
 > learn wStr fStr opts queue negData struc visited constraints =
 >   let sys = Feature.hread fStr 
->       ord = orderOfStr $ opt_order opts
+>       ord = opt_order opts
 >       k   = opt_k opts
 >       n   = opt_n opts
 >       a   = opt_a opts    
+>       m   = opt_m opts
+>       b   = opt_b opts
 >       pd :: Set Struc          -- positive data
 >       pd  = (Set.fromList                         
 >               . List.map (Struc.ofWord sys)
 >               . reduceWords ord k
+>               . List.map (addwbs b)
 >               . List.map words
 >               . lines) wStr
->       kws = kStrings k (Feature.symbols sys)      -- all strings of leng
+
+       kws = kStrings k (Feature.symbols sys)      -- all strings of length k
+
 >       filterf :: Ord a => Order -> Set [a] -> [a] -> Bool
 >       filterf Prec ws x = any (\w -> w `List.isSubsequenceOf` x) ws
 >       filterf Succ ws x = any (\w -> w `List.isInfixOf` x) ws
 >       nextGreaterThan :: Struc -> Set Struc
->       nextGreaterThan = Struc.nextGreater' sys n  -- 
+>       nextGreaterThan = Struc.nextGreater' sys n
 >       (<:<) = Struc.isLessThan ord                
 >       (<::<) x ys = Set.foldr' f False ys
 >         where f y bool = bool || (x <:< y) 
@@ -152,7 +172,8 @@
 >       learn' :: Queue Struc -> (Set [String]) -> Struc -> Set Struc -> Set Struc -> Set Struc
 >       learn' queue negData struc visited constraints
 >         | Queue.isEmpty queue                                                            --(1)
->         || Struc.size struc > k = constraints
+>           || Struc.size struc > k
+>           || Just (Set.size constraints) == m = constraints
 >         | struc >::> constraints = learn' qs negData hd visited constraints              --(2)
 >         | struc <::< pd = learn' nextQ negData hd (Set.insert struc visited) constraints --(3)
 >         | a == 0 = learn' qs negData hd visited (Set.insert struc constraints)           --(4)
@@ -167,7 +188,7 @@
 >           (hd,qs)    = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited
 >           nextQ      = Queue.pushMany (Set.toList nextStrucs) qs
->           strucExt   = Set.filter (filterf ord (Struc.minExtension sys struc)) kws
+>           strucExt   = Struc.extension ord sys k struc
 >     in learn' initialQ Set.empty minFactor Set.empty Set.empty
 
 
