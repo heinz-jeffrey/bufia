@@ -14,8 +14,10 @@ The Feature System is the main object here.
 > import qualified Table as Table
 > import qualified Data.List as List
 > import qualified Data.Set as Set
+> import qualified Data.IntSet as IntSet
 > import qualified Data.Map.Strict as Map
 
+> type IntSet = IntSet.IntSet
 > type Set = Set.Set
 > type Map = Map.Map
 > type Table = Table.Table
@@ -48,6 +50,15 @@ Elements are feature-value pairs.
 > hreadElt (x:[]) = error "hreadElt: Feature Name is Empty String"
 > hreadElt (x:xs) = eltFromPair (xs,[x])
 
+We will encode all elements as integers internally in the feature system.
+
+> indexOfElt :: [Elt] -> Elt -> Int
+> indexOfElt xs x = maybe (-1) id $ findIndex (==x) es
+
+> eltOfIndex :: [Elt] -> Int -> Elt
+> eltOfIndex = (!!)
+
+
 A feature system is basically a collection of
 compiled information from a feature table
 (symbol columns, feature rows, value cells)
@@ -60,25 +71,25 @@ compiled information from a feature table
                    elements should be listed in order of
                    decreasing priority
  
->                  symMap   :: Map Symbol (Set Elt),
+>                  symMap   :: Map Symbol (IntSet),
 
-                    maps each symbol to a set of elements
-                    (feature-value pairs)
+                    maps each symbol to a set of elements 
+                    (feature-value pairs; int)
 
->                  classMap :: Map Elt (Set Symbol),
+>                  classMap :: Map Int (Set Symbol),
 
-                    maps each element (feature-value pair)
+                    maps each element (feature-value pair; int)
                     to a set of symbols
 
->                  ncMap    :: Map (Set Elt) (Set Symbol),
+>                  ncMap    :: Map IntSet (Set Symbol),
 
-                    maps a set of elements (feature-value pairs)
+                    maps a set of elements (feature-value pairs; ints)
                     to a set of symbols
 
->                  unifyMap :: Map Elt (Set Elt)
+>                  unifyMap :: Map Int IntSet
 
-                    maps an element to a set of
-                    compatible/unifiable elements
+                    maps an element (int) to a set of
+                    compatible/unifiable elements (int)
 
 >                } deriving (Eq, Show, Read)
 
@@ -90,10 +101,10 @@ compiled information from a feature table
 >     features = feats,
 >     values   = vals,
 >     elements = elts,
->     symMap   = makeSymMap t,
+>     symMap   = makeSymMap elts t,
 >     classMap = clmap,
->     ncMap    = makeNCMap clmap (Set.fromList syms),
->     unifyMap = makeUnifyMap clmap elts
+>     ncMap    = makeNCMap elts clmap (Set.fromList syms),
+>     unifyMap = makeUnifyMap elts clmap elts
 >   }
 >   where syms  = Table.colNames t
 >         feats = Table.rowNames t
@@ -107,11 +118,11 @@ compiled information from a feature table
 > makeElts :: [String] -> [String] -> [Elt]
 > makeElts fs vs = map eltFromPair [ (f,v) | f <- fs, v <- vs]
 
-> addSymElt :: Map String (Set Elt) -> (String,String,String) -> Map String (Set Elt)
+> addSymElt :: Map Symbol IntSet -> (String,String,String) -> Map String IntSet
 > addSymElt m (s,f,v) = 
 >   Map.insertWith Set.union s (Set.singleton (makeElt f v)) m
 
-> makeSymMap :: Table -> Map String (Set Elt)
+> makeSymMap :: Table -> Map String IntSet
 > makeSymMap t = List.foldl' addSymElt Map.empty t
 > 
 > addEltSym ::  Map Elt (Set String) -> (String,String,String) -> Map Elt (Set String)
@@ -124,21 +135,21 @@ compiled information from a feature table
 > lookupElt :: Sys -> Elt -> Set String
 > lookupElt sys elt = maybe Set.empty id $ Map.lookup elt (classMap sys)
 
-> matchingSymbols :: Sys -> Set Elt -> [String]
+> matchingSymbols :: Sys -> IntSet -> [String]
 > matchingSymbols sys xs = Set.elems $ Set.foldl' (\ys x -> Set.intersection ys (lookupElt sys x)) (Set.fromList (symbols sys)) xs
 
 baseNCMap only contains the empty bundle (size 0)
 which maps to all symbols
 
-> baseNCMap :: Set String -> Map (Set Elt) (Set String)
+> baseNCMap :: Set String -> Map IntSet (Set String)
 > baseNCMap symbols = Map.singleton Set.empty symbols
 
-> insertMapMaybe :: (Set Elt)
+> insertMapMaybe :: IntSet
 >                -> Set String
 >                -> Elt
 >                -> Set String
->                -> Map (Set Elt) (Set String)
->                -> Map (Set Elt) (Set String)
+>                -> Map IntSet (Set String)
+>                -> Map IntSet (Set String)
 
 if the newBundle is the same as the oldBundle don't do anything
 
@@ -158,14 +169,14 @@ otherwise
 
 foldrWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
 
-> addToBundles :: Map Elt (Set String) -> Map (Set Elt) (Set String) -> Map (Set Elt) (Set String)
+> addToBundles :: Map Elt (Set String) -> Map IntSet (Set String) -> Map IntSet (Set String)
 > addToBundles classMap map = Map.foldrWithKey
 >                             (\k d m -> Map.foldrWithKey (insertMapMaybe k d) m classMap)
 >                             Map.empty
 >                             map 
 >
 
-> makeNCMap :: Map Elt (Set String) -> Set String -> Map (Set Elt) (Set String) 
+> makeNCMap :: Map Elt (Set String) -> Set String -> Map IntSet (Set String) 
 > makeNCMap classMap symbols = closeMap (addToBundles classMap) [baseNCMap symbols]
 
 the unifyMap ignores zero-valued elements because they are unifiable
@@ -175,7 +186,7 @@ zero-valued element Nothing will be returned.
 Care should be taken on how to interpret Nothing : either all elements
 or the Set.empty could be appropriate depending on the situation.
 
-> makeUnifyMap :: Map Elt (Set String) -> [Elt] -> Map Elt (Set Elt)
+> makeUnifyMap :: Map Elt (Set String) -> [Elt] -> Map Elt IntSet
 > makeUnifyMap clmp elts = List.foldl' (addUnifiableElts clmp elts) Map.empty nonNilEltPairs
 >  where
 >     nonNilEltPairs =
@@ -185,7 +196,7 @@ or the Set.empty could be appropriate depending on the situation.
 
 if e1 is unifiable with e2 we add e2 to the set of elements compatible with e1.
 
-> addUnifiableElts :: Map Elt (Set String) -> [Elt] -> Map Elt (Set Elt) -> (Elt,Elt) -> Map Elt (Set Elt)
+> addUnifiableElts :: Map Elt (Set String) -> [Elt] -> Map Elt IntSet -> (Elt,Elt) -> Map Elt IntSet
 > addUnifiableElts clmp elts m (e1,e2) =
 >   Map.insertWith
 >   Set.union
@@ -193,17 +204,17 @@ if e1 is unifiable with e2 we add e2 to the set of elements compatible with e1.
 >   (coExistInSomeSymbol e2 (Map.lookup e1 clmp) (Map.lookup e2 clmp))
 >   m
 
-> coExistInSomeSymbol :: Elt -> Maybe (Set String) -> Maybe (Set String) -> Set Elt
+> coExistInSomeSymbol :: Elt -> Maybe (Set String) -> Maybe (Set String) -> IntSet
 > coExistInSomeSymbol elt (Just xs) (Just ys) =
 >   if Set.null (Set.intersection xs ys)
 >   then Set.empty
 >   else Set.singleton elt
 > coExistInSomeSymbol _ _ _ = Set.empty
 
-> removeZeroElts :: Set Elt -> Set Elt
+> removeZeroElts :: IntSet -> IntSet
 > removeZeroElts = Set.filter (\x -> not (eltIsValue "0" x))
 
-> nonZeroElts :: Sys -> Set Elt
+> nonZeroElts :: Sys -> IntSet
 > nonZeroElts sys = removeZeroElts $ Set.fromList (elements sys)
 
 
