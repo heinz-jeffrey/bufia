@@ -1,3 +1,14 @@
+> {-|
+> Module:    Base
+> Copyright: (c) 2021-2022 Jeffrey Heinz
+> License:   MIT
+> This module implements BUFIA (Chandlee et al. 2019) for models of words that use either successor or precedence for order, and represet symbols and sets of other have (e.g. phonological features)provides general functions for a variety of purposes.
+>
+>
+> -}
+
+{-# LANGUAGE BangPatterns #-}
+
 > import System.Environment (getArgs)
 > import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
 >                              , ArgOrder(RequireOrder)
@@ -73,7 +84,7 @@
 > defaultOptions = Options
 >                  { optShowVersion    = False
 >                  , optShowUsage      = False
->                  , opt_k             = 2
+>                  , opt_k             = 3
 >                  , opt_n             = 3
 >                  , opt_a             = 1
 >                  , opt_m             = Nothing
@@ -88,19 +99,19 @@
 >                  opts { opt_k = read f })
 >                 "Int"
 >         )
->         "the max factor width (k-value)"
+>         "the max factor width (k-value, default 3)"
 >       , Option ['n'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_n = read f })
 >                 "Int"
 >         )
->         "the max number of features in a bundle"
+>         "the max number of features in a bundle (default 3)"
 >       , Option ['a'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_a = read f })
 >                 "Int"
 >         )
->         "which abductive principle to use {0,1,2}"
+>         "which abductive principle to use {0,1,2} (default 1)"
 >       , Option ['m'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_m = Just (read f :: Int) })
@@ -112,13 +123,13 @@
 >                  opts { opt_b = read f })
 >                 "Bool"
 >         )
->         "If 'True' then boundaries '#' are added to all words"
+>         "If 'True' then boundaries '#' are added to all words (default False)"
 >       , Option ['o'] ["order"]
 >         (ReqArg (\f opts ->
 >                  opts { opt_order = orderOfStr f })
 >                 "Order"
 >         )
->         "the order of the model: 'succ' or 'prec'"
+>         "the order of the model: 'succ' or 'prec' (default succ)"
 >       , Option ['h','?'] []
 >         (NoArg (\opts -> opts { optShowUsage = True }))
 >         "show this help"
@@ -165,12 +176,10 @@
 >       nextGreaterThan :: Struc -> Set Struc
 >       nextGreaterThan = Struc.nextGreater' sys n
 >       (<:<) = Struc.isLessThan ord                
->       (<::<) x ys = Set.foldr' f False ys
->         where f y bool = bool || (x <:< y) 
->       (>::>) x ys = Set.foldr' f False ys
->         where f y bool = bool || (y <:< x)
+>       (<::<) x ys = any (\y -> x <:< y) ys
+>       (>::>) x ys = any (\y -> y <:< x) ys
 >       learn' :: Queue Struc -> (Set [String]) -> Struc -> Set Struc -> Set Struc -> Set Struc
->       learn' queue negData struc visited constraints
+>       learn' !queue !negData !struc !visited !constraints
 >         | Queue.isEmpty queue                                                            --(1)
 >           || Struc.size struc > k
 >           || Just (Set.size constraints) == m = constraints
