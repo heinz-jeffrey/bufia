@@ -17,6 +17,8 @@
 > type Queue = Queue.PriorityQueue
 > type Set = Set.Set
 > type Struc = Struc.Struc
+> type Sys = Feature.Sys
+
 
 > initialQ :: Queue Struc
 > initialQ = Queue.push minFactor Queue.empty
@@ -40,10 +42,12 @@
 >     | not . null $ drop 2 files    = printUsage >> exitFailure
 >     | otherwise                    = do
 >         wStr <- readFile (files !! 0)
->         fStr <- readFile (files !! 1)             
->         putStrLn . Struc.setHshow $ 
->           learn wStr fStr opts initialQ Set.empty minFactor Set.empty Set.empty
+>         fStr <- readFile (files !! 1)
+>         let sys = Feature.hread fStr
+>           in putStrLn . Struc.setHshow sys
+>              $ learn wStr sys opts initialQ Set.empty minFactor Set.empty Set.empty
 >     where printUsage = putStr $ usageInfo usageHeader options
+>           
 
 > compilerOpts :: [String] -> IO (Options, [String])
 > compilerOpts argv
@@ -132,7 +136,7 @@
 > addwbs True xs = ("#":xs) ++ ["#"]
 
 > learn :: String
->       -> String
+>       -> Sys
 >       -> Options
 >       -> Queue Struc
 >       -> (Set [String])
@@ -141,9 +145,8 @@
 >       -> Set Struc
 >       -> Set Struc
 
-> learn wStr fStr opts queue negData struc visited constraints =
->   let sys = Feature.hread fStr 
->       ord = opt_order opts
+> learn wStr sys opts queue negData struc visited constraints =
+>   let ord = opt_order opts
 >       k   = opt_k opts
 >       n   = opt_n opts
 >       a   = opt_a opts    
