@@ -2,8 +2,11 @@
 > Module:    Base
 > Copyright: (c) 2021-2022 Jeffrey Heinz
 > License:   MIT
-> This module implements BUFIA (Chandlee et al. 2019) for models of words that use either successor or precedence for order, and represet symbols and sets of other have (e.g. phonological features)provides general functions for a variety of purposes.
 >
+> This program implements BUFIA (Chandlee et al. 2019)
+> for models of words that use either successor or precedence
+> for order, and represent symbols with sets of properties
+> (e.g. phonological features) 
 >
 > -}
 
@@ -67,7 +70,7 @@
 > usageHeader = "Usage: bufia [OPTIONS...] wordfile featurefile"
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 0.92"
+> printVersion = putStrLn "Version 1.0"
 
 > data Options = Options
 >   {optShowVersion   :: Bool
@@ -88,7 +91,7 @@
 >                  , opt_n             = 3
 >                  , opt_a             = 1
 >                  , opt_m             = Nothing
->                  , opt_b             = False
+>                  , opt_b             = True
 >                  , opt_order         = Succ
 >                  }
 
@@ -123,7 +126,7 @@
 >                  opts { opt_b = read f })
 >                 "Bool"
 >         )
->         "If 'True' then boundaries '#' are added to all words (default False)"
+>         "If 'True' then boundaries '#' are added to all words (default True)"
 >       , Option ['o'] ["order"]
 >         (ReqArg (\f opts ->
 >                  opts { opt_order = orderOfStr f })
