@@ -154,4 +154,4 @@ Shows the version number.
 [2] Jonathan Rawski. 2021. Structure and Learning in Natural Language. Dissertation, Stony Brook University.  [ [link](http://jeffreyheinz.net/advisees/2021_JonRawski_dissertation.pdf) ]
 
 [3] Hayes, Bruce, and Colin Wilson. 2008. A maximum entropy model of phonotactics and phonotactic learning.
-Linguistic Inquiry 39:379–440. [link](https://doi.org/10.1162/ling.2008.39.3.379) ]
+Linguistic Inquiry 39:379–440. [ [link](https://doi.org/10.1162/ling.2008.39.3.379) ]
