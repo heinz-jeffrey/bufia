@@ -1,2 +1,0 @@
-[+high][+high]
-[-high,-back][-low]

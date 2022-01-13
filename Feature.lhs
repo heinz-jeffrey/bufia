@@ -315,3 +315,8 @@ Ordering Features
 
 > sysByFV :: Sys -> Sys
 > sysByFV sys = sysByCompareElts (compareByFeatureValue sys) sys
+
+> adjustSys :: Int -> (Sys -> Sys)
+> adjustSys 0 = Feature.sysByExtSize
+> adjustSys 1 = Feature.sysByFV
+> adjustSys 2 = id
