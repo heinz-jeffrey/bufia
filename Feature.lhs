@@ -259,4 +259,59 @@ Ordering Features
 > greaterElts sys elt = tail $ List.dropWhile (/= elt) (elements sys)
 
 
+> compareByFeatureValue :: Sys -> Elt -> Elt -> Ordering
+> compareByFeatureValue sys e1 e2 = compare (f1,v1) (f2,v2)
+>   where fs = features sys
+>         vs = values sys
+>         f1 = encode fs (feature e1)
+>         f2 = encode fs (feature e2)
+>         v1 = encode vs (value e1)
+>         v2 = encode vs (value e2)
 
+> compareByExtSize :: Sys -> Elt -> Elt -> Ordering
+> compareByExtSize sys e1 e2
+>   | size s1 == size s2 = compareByFeatureValue sys e1 e2
+>   | size s1  < size s2 = GT
+>   | otherwise          = LT
+>   where es = elements sys
+>         s1 = lookupElt sys (encode es e1)
+>         s2 = lookupElt sys (encode es e2)
+>         size = IntSet.size
+
+> makeMapi2i :: [Elt] -> [Elt] -> IntMap Int
+> makeMapi2i oldElts newElts = List.foldl' f IntMap.empty newElts
+>   where f m e = IntMap.insert (encode oldElts e) (encode newElts e) m
+
+> i2if :: IntMap Int -> Int -> Int
+> i2if m n = maybe (-1) id (IntMap.lookup n m)
+
+> convertIntSet :: IntMap Int -> IntSet -> IntSet
+> convertIntSet m = IntSet.map (i2if m)
+
+> convertKeysIntMap :: IntMap Int -> IntMap a -> IntMap a
+> convertKeysIntMap m = IntMap.foldlWithKey' f IntMap.empty
+>   where f newmap k d = IntMap.insert (i2if m k) d newmap
+
+> sysByCompareElts :: (Elt -> Elt -> Ordering) -> Sys -> Sys
+> sysByCompareElts fcompare sys =
+>   Sys
+>   { symbols  = symbols sys,
+>     features = features sys,
+>     values   = values sys,
+>     elements = newElts,
+>     symMap   = IntMap.foldlWithKey' f IntMap.empty (symMap sys),
+>     classMap = convertKeysIntMap i2imap (classMap sys),
+>     unifyMap = IntMap.foldlWithKey' f IntMap.empty updatedKeyMap
+>   }
+>   where oldElts       = elements sys
+>         newElts       = List.sortBy fcompare oldElts
+>         i2imap        = makeMapi2i oldElts newElts
+>         updatedKeyMap = convertKeysIntMap i2imap (unifyMap sys)
+>         f newmap k d  = IntMap.insert k (convertIntSet i2imap d) newmap
+
+
+> sysByExtSize :: Sys -> Sys
+> sysByExtSize sys = sysByCompareElts (compareByExtSize sys) sys
+
+> sysByFV :: Sys -> Sys
+> sysByFV sys = sysByCompareElts (compareByFeatureValue sys) sys
