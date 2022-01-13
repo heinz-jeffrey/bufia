@@ -40,11 +40,6 @@
 > minFactor :: Struc
 > minFactor = Struc.minStruc
 
-> adjustSys :: Int -> (Sys -> Sys)
-> adjustSys 0 = Feature.sysByExtSize
-> adjustSys 1 = Feature.sysByFV
-> adjustSys 2 = id
-
 > main :: IO ()
 > main = uncurry act =<< compilerOpts =<< getArgs
 
@@ -64,7 +59,7 @@
 >         wStr <- readFile (files !! 0)
 >         fStr <- readFile (files !! 1)
 >         let sys    = Feature.hread fStr
->             newsys = (adjustSys (opt_f opts)) sys
+>             newsys = (Feature.adjustSys (opt_f opts)) sys
 >           in putStrLn . Struc.setHshow newsys
 >              $ learn wStr newsys opts initialQ Set.empty minFactor Set.empty Set.empty
 >     where printUsage = putStr $ usageInfo usageHeader options

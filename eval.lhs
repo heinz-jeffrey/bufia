@@ -7,46 +7,107 @@
 > in the grammar (if any).
 > -}
 
-
 > import System.Environment (getArgs)
+> import System.Console.GetOpt ( ArgDescr(NoArg, ReqArg)
+>                              , ArgOrder(RequireOrder)
+>                              , OptDescr(Option)
+>                              , getOpt
+>                              , usageInfo
+>                              )
+> import System.Exit (exitFailure)
 > import Base
-> import qualified Feature as Feature (Sys,hread)
+> import qualified Feature as Feature (Sys,hread,adjustSys)
 > import Struc
 > import Data.List (intercalate)
 > import qualified Data.Set as Set (Set,elems,filter)
 
 > type Set = Set.Set
 > type Sys = Feature.Sys
-> 
+
+
 > main :: IO ()
-> main = putStrLn =<< f =<< getArgs
+> main = uncurry act =<< compilerOpts =<< getArgs
 
->     where f (gf:wf:ff:o:[]) = main' gf wf ff o
->           f _ = return $ unlines
->                 [ "usage:\teval grammarfile wordfile",
->                   "\tdatafile is a text file containing a list of words (one word per line, symbols in words separated by spaces",
->                   "\tfeaturefile is a text file containing a comma-delimited feature system"
->                 ]
 
-> main' :: String -> String -> String -> String -> IO String
+> act :: Options -> [String] -> IO ()
+> act opts files
+>     | optShowVersion opts          = printVersion
+>     | optShowUsage opts            = printUsage
+>     | opt_f opts > 2
+>       || opt_f opts < 0            = printUsage >> exitFailure
+>     | null files                   = printUsage >> exitFailure
+>     | not . null $ drop 3 files    = printUsage >> exitFailure
+>     | otherwise                    = do
+>         fStr <- readFile (files !! 0)
+>         gStr <- readFile (files !! 1)
+>         wStr <- readFile (files !! 2)
+>         let ord    = opt_order opts
+>             sys    = Feature.hread fStr
+>             newsys = (Feature.adjustSys (opt_f opts)) sys
+>             grm    = Struc.setHread newsys gStr
+>           in ( putStrLn
+>              . intercalate "\n"
+>              . map (showEval sys ord)
+>              . map (eval sys ord grm)
+>              . map words 
+>              . lines) wStr
+>     where printUsage = putStr $ usageInfo usageHeader options
 
-> main' gf wf ff o = do
->   gStr <- readFile gf
->   wStr <- readFile wf
->   fStr <- readFile ff
->   let ord = orderOfStr o
->       sys = Feature.hread fStr
->       grm = Struc.setHread gStr in
->     (return
->      . intercalate "\n"
->      . map (showEval ord)
->      . map (eval sys ord grm)
->      . map words 
->      . lines) wStr
+
+> compilerOpts :: [String] -> IO (Options, [String])
+> compilerOpts argv
+>     = case getOpt RequireOrder options argv   -- replace RequireOrder with Permute ?
+>       of (o, n, []  ) -> return (foldl (flip id) defaultOptions o, n)
+>          (_, _, errs) -> ioError . userError $
+>                          concat errs ++ usageInfo usageHeader options
+
+> usageHeader :: String
+> usageHeader = "Usage: eval [OPTIONS...] featurefile grammarfile wordfile"
+
+> printVersion :: IO ()
+> printVersion = putStrLn "Version 1.0"
+
+> data Options = Options
+>   {optShowVersion   :: Bool
+>    , optShowUsage   :: Bool
+>    , opt_f          :: Int
+>    , opt_order      :: Order
+>   } deriving Show
+
+> defaultOptions :: Options
+> defaultOptions = Options
+>                  { optShowVersion    = False
+>                  , optShowUsage      = False
+>                  , opt_f             = 0
+>                  , opt_order         = Succ
+>                  }
+
+> options :: [OptDescr (Options -> Options)]
+> options
+>     = [ Option ['f'] []
+>         (ReqArg (\f opts ->
+>                  opts { opt_f = read f })
+>                 "Int"
+>         )
+>         "how feature-values are ordered {0,1,2} (default 0)"
+>       , Option ['o'] ["order"]
+>         (ReqArg (\f opts ->
+>                  opts { opt_order = orderOfStr f })
+>                 "Order"
+>         )
+>         "the order of the word model: 'succ' or 'prec'"
+>       , Option ['h','?'] []
+>         (NoArg (\opts -> opts { optShowUsage = True }))
+>         "show this help"
+>       , Option ['v'] []
+>         (NoArg (\opts -> opts { optShowVersion = True }))
+>         "show version number"
+>       ]
+
 
 
 `eval order grammar struc` returns a triple whose:
-first element is the struc itself
+first element  is the struc itself
 second element is the number of constraints it violates
 third elementi is the list of constraints it violates.
 
@@ -58,28 +119,6 @@ third elementi is the list of constraints it violates.
 >   where vs  = Set.elems $ Set.filter f cs
 >         f c = Struc.isLessThan ord c (Struc.ofWord sys x)
 
-> showEval :: Order -> ([String], Int, [Struc]) -> String
-> showEval ord (x,n,vs) = intercalate "\t" [stringify x, show n, Struc.listHshow vs]
+> showEval :: Sys -> Order -> ([String], Int, [Struc]) -> String
+> showEval sys ord (x,n,vs) = intercalate "\t" [stringify x, show n, Struc.listHshow sys vs]
 
-newtype OrdStruc = SuccStruc Struc
-newtype PrecStruc = PrecStruc Struc
-
-instance DiscretePartialOrderWithMinimum SuccStruc where
-  minimum = minStruc
-  -- size (Struc xs) = sum (map size xs)
-  size (Struc xs) = List.length xs
-  (<:<) = strucIsInfixOf
-  nextGreaterThan (Struc xsl) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise] where
-    adjoinLeft = Set.singleton $ Struc (minBundle:xsl)
-    adjoinRight = Set.singleton $ Struc (xsl ++ [minBundle])
-    addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply nextBundles xsl)
-
-instance DiscretePartialOrderWithMinimum PrecStruc where
-  minimum = minStruc
-  -- size (Struc xs) = sum (map size xs)
-  size (Struc xs) = List.length xs
-  (<:<) = strucIsSubsequenceOf
-  nextGreaterThan (Struc xsl) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise] where
-    adjoinLeft = Set.singleton $ Struc (minBundle:xsl)
-    adjoinRight = Set.singleton $ Struc (xsl ++ [minBundle])
-    addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply nextBundles xsl)
