@@ -130,7 +130,7 @@
 >         "which abductive principle to use {0,1,2} (default 1)"
 >       , Option ['f'] []
 >         (ReqArg (\f opts ->
->                  opts { opt_a = read f })
+>                  opts { opt_f = read f })
 >                 "Int"
 >         )
 >         "how feature-values should be ordered {0,1,2} (default 0)"
