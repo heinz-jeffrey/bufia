@@ -13,116 +13,130 @@
 > import Feature
 > import qualified Data.List as List
 > import qualified Data.Set as Set
+> import qualified Data.IntSet as IntSet
 > import qualified Data.Map as Map
+> import qualified Data.IntMap as IntMap
 
 We use `data` instead of `type` because we want to create our own instance of Ord. 
+We can also use `newtype` and create our own instance and this uses less memory.
+Use newtype when the constructor has only one argument.  
 
-> data Bundle = Bundle (Set Elt) deriving (Eq, Show, Read)
+Check out Data.IntSet instead of type (Data.Set.Set Int).
 
-> unBundle :: Bundle -> Set Elt
+> newtype Bundle = Bundle IntSet deriving (Eq, Show, Read)
+
+> unBundle :: Bundle -> IntSet
 > unBundle (Bundle xs) = xs
 
 > bundleSep = ','
 
-> hshowBundle :: Bundle -> String
-> hshowBundle (Bundle xs) = "[" ++ List.intercalate [bundleSep] contents ++ "]"
->   where contents = map hshowElt (Set.toList xs)
+> hshowBundle :: Sys -> Bundle -> String
+> hshowBundle sys (Bundle xs) = "[" ++ List.intercalate [bundleSep] contents ++ "]"
+>   where contents = map (hshowElt (elements sys)) (IntSet.toList xs)
 
-> hreadBundle :: String -> Bundle
-> hreadBundle xs
+> hreadBundle :: Sys -> String -> Bundle
+> hreadBundle sys xs
 >   | length xs < 2
 >   || head xs /= '['
 >   || last xs /= ']' = error "hreadBundle: Unreadable Bundle; bundles should be enclosed in square brackets."
->   | otherwise = Bundle . List.foldl' f Set.empty $ Split.bySep bundleSep ys
+>   | otherwise = Bundle . List.foldl' f IntSet.empty $ Split.bySep bundleSep ys
 >   where ys = (reverse . tail . reverse . tail) xs -- this removes the square brackets
->         f b str = Set.insert (hreadElt str) b
+>         f b str = IntSet.insert (encode (elements sys) (hreadElt str)) b
 
 > minBundle :: Bundle
-> minBundle = Bundle Set.empty
+> minBundle = Bundle IntSet.empty
 
 bundleMaxElt must be non-empty...
 
-> bundleMaxElt :: Sys -> Bundle -> Elt
-> bundleMaxElt sys b = (last . List.sortBy (compareElt sys) . Set.elems . unBundle) b
+> bundleMaxElt :: Bundle -> Int
+> bundleMaxElt = IntSet.findMax . unBundle
+
 
 maybe this should be called bundleMatchingSymbols?
 
-> bundleExtension :: Sys -> Bundle -> Set Symbol
-> bundleExtension sys (Bundle xs) = Set.fromList (matchingSymbols sys xs)
+> bundleExtension :: Sys -> Bundle -> IntSet
+> bundleExtension sys (Bundle es) = matchingSymbols sys es
 
 > instance Ord Bundle where
 >   compare (Bundle xs) (Bundle ys)
->     | Set.null xs && Set.null ys = EQ
->     | (Set.size xs) < (Set.size ys) = LT
->     | (Set.size xs) > (Set.size ys) = GT
+>     | IntSet.null xs && IntSet.null ys = EQ
+>     | (IntSet.size xs) < (IntSet.size ys) = LT
+>     | (IntSet.size xs) > (IntSet.size ys) = GT
 >     | minx < miny = LT
 >     | minx > miny = GT
->     | otherwise = compare (Set.delete minx xs) (Set.delete miny ys)
->     where minx = Set.findMin xs 
->           miny = Set.findMin ys 
+>     | otherwise = compare (IntSet.delete minx xs) (IntSet.delete miny ys)
+>     where minx = IntSet.findMin xs 
+>           miny = IntSet.findMin ys 
 
-> lookupUnifiable :: Sys -> Elt -> Set Elt
-> lookupUnifiable sys elt = maybe Set.empty id $ Map.lookup elt (Feature.unifyMap sys)
 
-> findUnifiable :: Sys -> Set Elt -> Elt -> Set Elt
-> findUnifiable sys elts elt = Set.intersection elts (lookupUnifiable sys elt)
+> lookupUnifiable :: Sys -> Int -> IntSet
+> lookupUnifiable sys elt = maybe IntSet.empty id $ IntMap.lookup elt (Feature.unifyMap sys)
+
+> findUnifiable :: Sys -> IntSet -> Int -> IntSet
+> findUnifiable sys elts elt = IntSet.intersection elts (lookupUnifiable sys elt)
 
 Note we remove the zero-valued features because lookupUnifiable
-will return Set.empty for elements not in unifyMap and we don't
+will return IntSet.empty for elements not in unifyMap and we don't
 care about the zero-valued features
 
-> unifiableElts :: Sys -> Bundle -> Set Elt
+> unifiableElts :: Sys -> Bundle -> IntSet
 > unifiableElts sys (Bundle elts) =
->   Set.foldl' (findUnifiable sys) (nonZeroElts sys) (removeZeroElts elts)
+>   IntSet.foldl' (findUnifiable sys) allNonZeroElts (removeZeroElts elemList elts)
+>   where elemList = elements sys
+>         allNonZeroElts = removeZeroElts elemList (IntSet.fromList (indices elemList))
 
-> insertBundleMaybe :: Int -> Elt -> Bundle -> Maybe Bundle
-> insertBundleMaybe maxBundleSize x (Bundle xs)
->   | 1 + (Set.size xs) > maxBundleSize = Nothing
->   | otherwise = Just (Bundle (Set.insert x xs))
+
+> insertBundleMaybe :: Int -> Int -> Bundle -> Maybe Bundle
+> insertBundleMaybe maxBundleSize e_i (Bundle elts)
+>   | 1 + (IntSet.size elts) > maxBundleSize = Nothing
+>   | otherwise = Just (Bundle (IntSet.insert e_i elts))
+
 
 bundleNextGreater' takes an Int and will not add features to a bundle
 if it would then exceed the max bundle size.
 
- eltsToAdd
-
 > bundleNextGreater' :: Sys -> Int -> Bundle -> Set Bundle
-> bundleNextGreater' sys maxBundleSize b = exciseNothings $ Set.map f eltsToAdd
->   where f elt     = insertBundleMaybe maxBundleSize elt b
->         eltsToAdd = uElts
+> bundleNextGreater' sys maxBundleSize b =
+>   exciseNothings . Set.fromList . map f . IntSet.toList $ eltsToAdd
+>   where f e_i     = insertBundleMaybe maxBundleSize e_i b
 
--- >         eltsToAdd = Set.intersection uElts (Set.fromList gElts)
+-- >         eltsToAdd = uElts
 
->         uElts     = unifiableElts sys b
-
--- >         gElts     = if b == minBundle
--- >                     then elements sys
--- >                     else greaterElts sys $ bundleMaxElt sys b
+>         eltsToAdd = IntSet.intersection uElts (IntSet.fromList gElts)
+>         all_e_i   = indices (elements sys)
+>         maxelt    = bundleMaxElt b
+>         uElts     = unifiableElts sys b            -- unifiable elements
+>         gElts     = if b == minBundle              -- greater elements
+>                     then all_e_i 
+>                     else filter (\i -> i > maxelt) all_e_i
 
 
 -- bundleNextGreater also only adds elements that are greater than the
 -- largest element in the bundle.
 
+
 bundleNextGreater has no restriction on size.
 
 > bundleNextGreater :: Sys -> Bundle -> Set Bundle
-> bundleNextGreater sys b@(Bundle xs) = Set.map f eltsToAdd
->   where f elt     = Bundle $ Set.insert elt xs
->         eltsToAdd = uElts
-
--- >         eltsToAdd = Set.intersection uElts (Set.fromList gElts)
-
->         uElts     = unifiableElts sys b
-
--- >         gElts     = if b == minBundle
--- >                     then elements sys
--- >                     else greaterElts sys $ bundleMaxElt sys b
+> bundleNextGreater sys b@(Bundle xs) =
+>   Set.fromList . map f . IntSet.toList $ eltsToAdd
+>   where f e_i     = Bundle $ IntSet.insert e_i xs
+>         eltsToAdd = IntSet.intersection uElts (IntSet.fromList gElts)
+>         all_e_i   = indices (elements sys)
+>         maxelt    = bundleMaxElt b
+>         uElts     = unifiableElts sys b            -- unifiable elements
+>         gElts     = if b == minBundle              -- greater elements
+>                     then all_e_i 
+>                     else filter (\i -> i > maxelt) all_e_i
 
 
 > bundleIsLessThan :: Bundle -> Bundle -> Bool
-> bundleIsLessThan (Bundle xs) (Bundle ys) = xs `Set.isSubsetOf` ys
+> bundleIsLessThan (Bundle xs) (Bundle ys) = xs `IntSet.isSubsetOf` ys
 
 > bundleIsLessThanExt :: Sys -> Bundle -> Bundle -> Bool
-> bundleIsLessThanExt sys xs ys = (bundleExtension sys xs) `Set.isSubsetOf` (bundleExtension sys ys)
+> bundleIsLessThanExt sys xs ys = (bundleExtension sys xs) `IntSet.isSubsetOf` (bundleExtension sys ys)
+
+
 
 
 ==========
@@ -135,21 +149,21 @@ Structures
 > unStruc :: Struc -> [Bundle]
 > unStruc (Struc bs) = bs
 
-> hshow :: Struc -> String
-> hshow (Struc xs) = concat (map hshowBundle xs)
+> hshow :: Sys -> Struc -> String
+> hshow sys (Struc xs) = concat (map (hshowBundle sys) xs)
 
-> listHshow :: [Struc] -> String
-> listHshow = List.intercalate ";" . List.map hshow 
+> listHshow :: Sys -> [Struc] -> String
+> listHshow sys = List.intercalate ";" . List.map (hshow sys)
 
-> setHshow :: Set Struc -> String
-> setHshow = List.intercalate "\n" . List.map hshow . Set.toList 
+> setHshow :: Sys -> Set Struc -> String
+> setHshow sys = List.intercalate "\n" . List.map (hshow sys) . Set.toList 
 
-> hread :: String -> Struc
-> hread = Struc . map hreadBundle . map f . Split.bySep ']'
+> hread :: Sys -> String -> Struc
+> hread sys = Struc . map (hreadBundle sys) . map f . Split.bySep ']'
 >   where f x = x ++ "]"
 
-> setHread :: String -> Set Struc 
-> setHread = Set.fromList . map Struc.hread . lines 
+> setHread :: Sys -> String -> Set Struc 
+> setHread sys = Set.fromList . map (Struc.hread sys) . lines 
 
 > minStruc :: Struc
 > minStruc = Struc [minBundle]
@@ -169,16 +183,21 @@ Structures
 >           headys = List.head ysl
 
 
+
 maybe this should be called minMatchingStrings?
 
 > minExtension :: Sys -> Struc -> Set [Symbol]
 > minExtension sys (Struc []) = Set.empty
-> minExtension sys (Struc (b:[])) = Set.map (:[]) (bundleExtension sys b)
-> minExtension sys (Struc (b:bs)) =  minExtension sys (Struc [b]) +++ minExtension sys (Struc bs)
+> minExtension sys (Struc (b:[])) = Set.fromList . map f $ IntSet.toList (bundleExtension sys b)
+>   where f s_i = [decode (symbols sys) s_i]
+> minExtension sys (Struc (b:bs)) = minExtension sys (Struc [b]) +++ minExtension sys (Struc bs)
+
+
+
 
 -- > kExtension :: Sys -> Order -> Int -> Struc -> Set [Symbol]
 -- > kExtension sys ord k (Struc xs)
--- >   | length xs >  k = Set.empty
+-- >   | length xs >  k = IntSet.empty
 -- >   | length xs == k = minExt
 -- >   | ord == Prec    = kPrecExtend sys k minExt
 -- >   | ord == Succ    = kSuccExtend sys k minExt
@@ -194,18 +213,21 @@ getElts maps a string (symbol) to the set of features it has
 given by the feature system.
 
 > getElts :: Sys -> Symbol -> Bundle
-> getElts sys x = Bundle (maybe Set.empty id elts)
->   where elts = Map.lookup x (symMap sys)
+> getElts sys s = Bundle (maybe IntSet.empty id elts)
+>   where elts = IntMap.lookup s_i (symMap sys)
+>         s_i  = encode (symbols sys) s
 
 The maybe function takes a default value, a function, and a Maybe
 value. If the Maybe value is Nothing, the function returns the
 default value. Otherwise, it applies the function to the value
 inside the Just and returns the result.
 
+
 We lift getElts to changing a list of symbols to a structure
 
 > ofWord :: Sys -> [Symbol] -> Struc
 > ofWord sys xs = Struc (map (getElts sys) xs)
+
 
 We lift changeStructure to change a wordlist to a set of structures
 
@@ -231,17 +253,22 @@ We lift changeStructure to change a wordlist to a set of structures
 > isLessThan Succ = strucIsInfixOf
 > isLessThan Prec = strucIsSubsequenceOf
 
+
+
+
 > nextGreater' :: Sys -> Int -> Struc -> Set Struc
 > nextGreater' sys maxBundleSize (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
 >   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
 >         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
 >         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater' sys maxBundleSize) bs)
 
+
 > nextGreater :: Sys -> Struc -> Set Struc
 > nextGreater sys (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
 >   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
 >         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
 >         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater sys) bs)
+
 
 
 `extension ord sys k x` gives the set of words of size k that match struc x. 
@@ -260,18 +287,3 @@ We lift changeStructure to change a wordlist to a set of structures
 
 
 
-For Testing
-
-csv = ",i,u,e,o,a\nhigh,+,+,-,-,-\nback,-,+,-,+,-\nlow,-,-,-,-,+"
-
-vsys = (Feature.makeSystem . Table.ofStr) csv
-high = makeElt "high" "+"
-nonhigh = makeElt "high" "-"
-back = makeElt "back" "+"
-nonback = makeElt "back" "-"
-low = makeElt "low" "+"
-nonlow = makeElt "low" "-"
-
-s0  = Struc []
-s0' = Struc [minBundle]
-s1  = Struc [Bundle (Set.fromList [high]), Bundle (Set.fromList [back])]

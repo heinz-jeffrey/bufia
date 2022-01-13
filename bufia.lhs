@@ -31,6 +31,8 @@
 > type Queue = Queue.PriorityQueue
 > type Set = Set.Set
 > type Struc = Struc.Struc
+> type Sys = Feature.Sys
+
 
 > initialQ :: Queue Struc
 > initialQ = Queue.push minFactor Queue.empty
@@ -38,6 +40,10 @@
 > minFactor :: Struc
 > minFactor = Struc.minStruc
 
+> featureOrder :: Int -> (Feature.Elt -> Feature.Elt -> Ordering)
+> featureOrder 0 = Feature.compareByExtSize
+> featureOrder 1 = Feature.compareByFeatureValue
+> featureOrder 2 = id
 
 > main :: IO ()
 > main = uncurry act =<< compilerOpts =<< getArgs
@@ -49,15 +55,20 @@
 >     | optShowVersion opts          = printVersion
 >     | optShowUsage opts            = printUsage
 >     | opt_a opts > 2
->       || opt_a opts < 0            = printUsage >> exitFailure
+>       || opt_a opts < 0
+>       || opt_f opts > 2
+>       || opt_f opts < 0            = printUsage >> exitFailure
 >     | null files                   = printUsage >> exitFailure
 >     | not . null $ drop 2 files    = printUsage >> exitFailure
 >     | otherwise                    = do
 >         wStr <- readFile (files !! 0)
->         fStr <- readFile (files !! 1)             
->         putStrLn . Struc.setHshow $ 
->           learn wStr fStr opts initialQ Set.empty minFactor Set.empty Set.empty
+>         fStr <- readFile (files !! 1)
+>         let sys    = Feature.hread fStr
+>             newsys = Feature.sysByExtSize sys
+>           in putStrLn . Struc.setHshow newsys
+>              $ learn wStr newsys opts initialQ Set.empty minFactor Set.empty Set.empty
 >     where printUsage = putStr $ usageInfo usageHeader options
+
 
 > compilerOpts :: [String] -> IO (Options, [String])
 > compilerOpts argv
@@ -78,6 +89,7 @@
 >    , opt_k          :: Int
 >    , opt_n          :: Int
 >    , opt_a          :: Int
+>    , opt_f          :: Int
 >    , opt_m          :: Maybe Int
 >    , opt_b          :: Bool
 >    , opt_order      :: Order
@@ -90,6 +102,7 @@
 >                  , opt_k             = 3
 >                  , opt_n             = 3
 >                  , opt_a             = 1
+>                  , opt_f             = 0
 >                  , opt_m             = Nothing
 >                  , opt_b             = True
 >                  , opt_order         = Succ
@@ -115,6 +128,12 @@
 >                 "Int"
 >         )
 >         "which abductive principle to use {0,1,2} (default 1)"
+>       , Option ['f'] []
+>         (ReqArg (\f opts ->
+>                  opts { opt_a = read f })
+>                 "Int"
+>         )
+>         "how feature-values should be ordered {0,1,2} (default 0)"
 >       , Option ['m'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_m = Just (read f :: Int) })
@@ -132,7 +151,7 @@
 >                  opts { opt_order = orderOfStr f })
 >                 "Order"
 >         )
->         "the order of the model: 'succ' or 'prec' (default succ)"
+>         "the order of the word model: 'succ' or 'prec'"
 >       , Option ['h','?'] []
 >         (NoArg (\opts -> opts { optShowUsage = True }))
 >         "show this help"
@@ -146,7 +165,7 @@
 > addwbs True xs = ("#":xs) ++ ["#"]
 
 > learn :: String
->       -> String
+>       -> Sys
 >       -> Options
 >       -> Queue Struc
 >       -> (Set [String])
@@ -155,9 +174,8 @@
 >       -> Set Struc
 >       -> Set Struc
 
-> learn wStr fStr opts queue negData struc visited constraints =
->   let sys = Feature.hread fStr 
->       ord = opt_order opts
+> learn wStr sys opts queue negData struc visited constraints =
+>   let ord = opt_order opts
 >       k   = opt_k opts
 >       n   = opt_n opts
 >       a   = opt_a opts    

@@ -12,6 +12,8 @@
 > import Data.List as List
 > import Data.Maybe 
 
+> type Symbol = String
+
 The class DiscretePartialOrderWithMinimum contains the functions needed for the BUFIA learning algorithm.
 Functions `minimum` and `size` are self-explantory.
 x <:< y is True iff x is less than y (structure x is contained within structure y)                    
@@ -243,3 +245,37 @@ compareByIndex assumes x1 and x2 are elements of xs
 >   where i1 = fromJust (List.elemIndex x1 xs)
 >         i2 = fromJust (List.elemIndex x2 xs)
 
+
+Encoding and Decoding
+
+Encoding and Decoding elements of type a requires a list of xs :: [a]
+list represents a bijection between its elements and the natural
+numbers by index.
+
+encode' xs x returns Just the index or Nothing if x is not in xs.
+
+> encode' :: Eq a => [a] -> a -> Maybe Int
+> encode' xs x = List.findIndex (==x) xs
+
+decode' xs n returns Just the element at index n in xs otherwise returns Nothing
+
+> decode' :: [a] -> Int -> Maybe a
+> decode' xs n
+>   | n < 0
+>     || n >= length xs = Nothing
+>   | otherwise = Just (xs !! n)
+
+encode xs x returns the index in xs of x or -1 if there is no x in xs.
+
+> encode :: Eq a => [a] -> a -> Int
+> encode xs x = maybe (-1) id $ List.findIndex (==x) xs
+
+decode xs n returns the element at index n or an error if n is outside the range of xs.
+Best to use when n is known to be in [0 .. (length xs) - 1]
+
+> decode :: [a] -> Int -> a
+> decode = (!!) 
+
+
+> indices :: [a] -> [Int]
+> indices xs = [0 .. length xs - 1]
