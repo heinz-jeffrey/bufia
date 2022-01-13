@@ -2,7 +2,7 @@
 > Program:    Eval
 > Copyright: (c) 2021-2022 Jeffrey Heinz
 > License:   MIT
-> Eval reads a grammarfile, wordfile, and featurefile
+> Eval reads a  featurefile, grammarfile, and wordfile
 > and outputs which words violate which constraints
 > in the grammar (if any).
 > -}
