@@ -47,8 +47,8 @@
 >             grm    = Struc.setHread newsys gStr
 >           in ( putStrLn
 >              . intercalate "\n"
->              . map (showEval sys ord)
->              . map (eval sys ord grm)
+>              . map (showEval newsys ord)
+>              . map (eval newsys ord grm)
 >              . map words 
 >              . lines) wStr
 >     where printUsage = putStr $ usageInfo usageHeader options
