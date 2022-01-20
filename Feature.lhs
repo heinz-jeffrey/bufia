@@ -320,3 +320,5 @@ Ordering Features
 > adjustSys 0 = Feature.sysByExtSize
 > adjustSys 1 = Feature.sysByFV
 > adjustSys 2 = id
+
+",i,u,e,o,a,\nback,-,+,-,+,-\nlow,-,-,-,-,+\nhigh,+,+,-,-,-\n"

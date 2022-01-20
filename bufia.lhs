@@ -28,17 +28,10 @@
 > import qualified Data.List as List
 > import qualified Data.Set as Set 
 
-> type Queue = Queue.PriorityQueue
 > type Set = Set.Set
 > type Struc = Struc.Struc
 > type Sys = Feature.Sys
-
-
-> initialQ :: Queue Struc
-> initialQ = Queue.push minFactor Queue.empty
-
-> minFactor :: Struc
-> minFactor = Struc.minStruc
+> type Queue = Queue.PriorityQueue Struc
 
 > main :: IO ()
 > main = uncurry act =<< compilerOpts =<< getArgs
@@ -51,6 +44,8 @@
 >     | optShowUsage opts            = printUsage
 >     | opt_a opts > 2
 >       || opt_a opts < 0
+>       || opt_k opts < 1
+>       || opt_n opts < 1
 >       || opt_f opts > 2
 >       || opt_f opts < 0            = printUsage >> exitFailure
 >     | null files                   = printUsage >> exitFailure
@@ -61,7 +56,7 @@
 >         let sys    = Feature.hread fStr
 >             newsys = (Feature.adjustSys (opt_f opts)) sys
 >           in putStrLn . Struc.setHshow newsys
->              $ learn wStr newsys opts initialQ Set.empty minFactor Set.empty Set.empty
+>              $ learn wStr newsys opts 
 >     where printUsage = putStr $ usageInfo usageHeader options
 
 
@@ -110,13 +105,13 @@
 >                  opts { opt_k = read f })
 >                 "Int"
 >         )
->         "the max factor width (k-value, default 3)"
+>         "the max factor width (k-value, k>0, default 3)"
 >       , Option ['n'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_n = read f })
 >                 "Int"
 >         )
->         "the max number of features in a bundle (default 3)"
+>         "the max number of features in a bundle (n>0, default 3)"
 >       , Option ['a'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_a = read f })
@@ -134,7 +129,7 @@
 >                  opts { opt_m = Just (read f :: Int) })
 >                 "Maybe Int"
 >         )
->         "the max number of constraints to return (default None)"
+>         "the max number of constraints to return (default No max)"
 >       , Option ['b'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_b = read f })
@@ -162,14 +157,9 @@
 > learn :: String
 >       -> Sys
 >       -> Options
->       -> Queue Struc
->       -> (Set [String])
->       -> Struc
->       -> Set Struc
->       -> Set Struc
 >       -> Set Struc
 
-> learn wStr sys opts queue negData struc visited constraints =
+> learn wStr sys opts = -- queue negData struc visited constraints =
 >   let ord = opt_order opts
 >       k   = opt_k opts
 >       n   = opt_n opts
@@ -184,7 +174,7 @@
 >               . List.map words
 >               . lines) wStr
 
-       kws = kStrings k (Feature.symbols sys)      -- all strings of length k
+        kws = kStrings k (Feature.symbols sys)      -- all strings of length k
 
 >       filterf :: Ord a => Order -> Set [a] -> [a] -> Bool
 >       filterf Prec ws x = any (\w -> w `List.isSubsequenceOf` x) ws
@@ -194,29 +184,30 @@
 >       (<:<) = Struc.isLessThan ord                
 >       (<::<) x ys = any (\y -> x <:< y) ys
 >       (>::>) x ys = any (\y -> y <:< x) ys
->       learn' :: Queue Struc -> (Set [String]) -> Struc -> Set Struc -> Set Struc -> Set Struc
->       learn' !queue !negData !struc !visited !constraints
+
+>       q0 = Queue.push Struc.minStruc Queue.empty
+
+>       learn' :: Queue -> (Set [String]) -> Set Struc -> Set Struc -> Set Struc
+>       learn' !queue !negData !visited !constraints
 >         | Queue.isEmpty queue                                                            --(1)
 >           || Struc.size struc > k
 >           || Just (Set.size constraints) == m = constraints
->         | struc >::> constraints = learn' qs negData hd visited constraints              --(2)
->         | struc <::< pd = learn' nextQ negData hd (Set.insert struc visited) constraints --(3)
->         | a == 0 = learn' qs negData hd visited (Set.insert struc constraints)           --(4)
+>         | struc >::> constraints = learn' qs negData visited constraints             --(2)
+>         | struc <::< pd = learn' nextQ negData (Set.insert struc visited) constraints --(3)
+>         | a == 0 = learn' qs negData  visited (Set.insert struc constraints)          --(4)
 >         | a == 1                                                                         --(5)
 >           && not (Set.isSubsetOf strucExt negData) =
->           learn' qs (Set.union negData strucExt) hd visited (Set.insert struc constraints)  
+>           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints)  
 >         | a == 2                                                                         --(6)
 >           && zeroIntersect strucExt negData =
->           learn' qs (Set.union negData strucExt) hd visited (Set.insert struc constraints) 
->         | otherwise = learn' nextQ negData hd (Set.insert struc visited) constraints     --(7)
+>           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints) 
+>         | otherwise = learn' nextQ negData (Set.insert struc visited) constraints     --(7)
 >         where
->           (hd,qs)    = Queue.pop queue
+>           (struc,qs) = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited
 >           nextQ      = Queue.pushMany (Set.toList nextStrucs) qs
 >           strucExt   = Struc.extension ord sys k struc
->     in learn' initialQ Set.empty minFactor Set.empty Set.empty
-
-
+>     in learn' q0 Set.empty Set.empty Set.empty
 
      (1) We stop if any of the following conditions are met:
       * the Queue is empty we stop.
@@ -246,3 +237,5 @@
      its extension overlaps with the current grammar (2) and will be
      skipped. Therefore we add the struc to the set of visited
      structures and move on
+
+

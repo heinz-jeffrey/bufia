@@ -168,6 +168,12 @@ Structures
 > minStruc :: Struc
 > minStruc = Struc [minBundle]
 
+> kminStruc :: Int -> Struc
+> kminStruc k = Struc $ take k $ repeat minBundle
+
+> isBlank :: Struc -> Bool
+> isBlank (Struc bs) = all (==minBundle) bs
+
 > size :: Struc -> Int
 > size (Struc bs) = length bs
 
@@ -191,8 +197,6 @@ maybe this should be called minMatchingStrings?
 > minExtension sys (Struc (b:[])) = Set.fromList . map f $ IntSet.toList (bundleExtension sys b)
 >   where f s_i = [decode (symbols sys) s_i]
 > minExtension sys (Struc (b:bs)) = minExtension sys (Struc [b]) +++ minExtension sys (Struc bs)
-
-
 
 
 -- > kExtension :: Sys -> Order -> Int -> Struc -> Set [Symbol]
@@ -254,23 +258,21 @@ We lift changeStructure to change a wordlist to a set of structures
 > isLessThan Prec = strucIsSubsequenceOf
 
 
-
-
 > nextGreater' :: Sys -> Int -> Struc -> Set Struc
-> nextGreater' sys maxBundleSize (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
->   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
->         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
->         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater' sys maxBundleSize) bs)
-
+> nextGreater' sys maxBundleSize (Struc bs) =
+>   let nextStrucs = Set.map Struc (pointwiseApply (bundleNextGreater' sys maxBundleSize) bs)
+>   in if all (== minBundle) bs
+>      then Set.insert (Struc (minBundle:bs)) nextStrucs 
+>      else nextStrucs
 
 > nextGreater :: Sys -> Struc -> Set Struc
-> nextGreater sys (Struc bs) = List.foldl Set.union Set.empty [adjoinLeft,adjoinRight,addEltsPointwise]
->   where adjoinLeft = Set.singleton $ Struc (minBundle:bs)
->         adjoinRight = Set.singleton $ Struc (bs ++ [minBundle])
->         addEltsPointwise = Set.map (\xs -> Struc xs) (pointwiseApply (bundleNextGreater sys) bs)
+> nextGreater sys (Struc bs) =
+>   let nextStrucs = Set.map Struc (pointwiseApply (bundleNextGreater sys) bs)
+>   in if all (== minBundle) bs
+>      then Set.insert (Struc (minBundle:bs)) nextStrucs
+>      else nextStrucs
 
-
-
+ 
 `extension ord sys k x` gives the set of words of size k that match struc x. 
 
 > extension :: Order -> Sys -> Int -> Struc -> Set [Symbol]
