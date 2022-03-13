@@ -1,0 +1,43 @@
+#
+# Malarky
+#
+# Vowels
+#
+= nonLowBack+ {/o, /u}
+= nonLowBack- {/i, /e, /y, /ø}
+= LOW {/a, /ɑ}
+= V {nonLowBack+, nonLowBack-, LOW}
+#
+# Consonants
+#
+= OBS {/p, /b, /t, /d, /k, /g, /s, /z, /ʃ, /ʒ, /ts, /dz, /tʃ, /dʒ}
+= SIBA {/s, /z, /ts, /dz}
+= SIBP {/ʃ, /ʒ, /tʃ, /dʒ}
+= NAS {/m, /n, /ŋ}
+= VOICE- {/p, /t, /k, /s, /ʃ, /ts, /tʃ}
+= C {/p, /b, /t, /d, /k, /g, /s, /z, /ʃ, /ʒ, /ts, /dz, /tʃ, /dʒ, /m, /n, /ŋ, /l, /r, /j, /w}
+#
+# Syllable Constraints
+#
+= SYL ¬⋁{⟨C C C⟩, ⟨V V⟩, %|⟨C C⟩, |%⟨C C⟩, ⟨NAS VOICE-⟩, ⟨OBS OBS⟩} 
+#
+# Consonant Harmony Constraints
+#
+= CH ¬⋁{⟨SIBA, SIBP⟩,⟨SIBP, SIBA⟩}
+#
+# Vowel Harmony Constraints
+#
+= VH ¬⋁{⟨nonLowBack+, nonLowBack-⟩,⟨nonLowBack-, nonLowBack+⟩}
+#
+# Putting them all in Malarky
+#
+= malarky /\{SYL, CH, VH}
+#
+# Writing the Malarky in att format
+#
+:writeatt "malarky.att" "ins" "outs" malarky
+#
+# To convert malarky.att to a binary fst file
+# run this command from the command line
+# (must have openfst installed)
+# fstcompile --isymbols=ins --osymbols=outs --keep_isymbols --keep_osymbols malarky.att malarky.fst

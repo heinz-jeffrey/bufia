@@ -189,7 +189,7 @@ computed.
 > dosomething f x n word = combineAll left right xs where
 >   (left,headright) = List.splitAt n word
 >   right = List.tail headright
->   xs = f x 
+>   xs = f x
 
 pointwiseApply f word applies the function f pointwise within the
 word and collects the results as a set. Function f takes each
@@ -279,3 +279,15 @@ Best to use when n is known to be in [0 .. (length xs) - 1]
 
 > indices :: [a] -> [Int]
 > indices xs = [0 .. length xs - 1]
+
+`kblocksize s k b` returns the number of factors of size k
+ with or without word boundaries
+(`b == True` means include wbs; `b==False` means without)
+
+> kblocksize :: Floating a => a -> a -> Bool -> a
+> kblocksize s k False = s ** k
+> kblocksize s k True  = s ** k  +  2 * s ** (k - 1)
+
+> thetaTP :: (Floating a, RealFrac a) => a -> Int
+> thetaTP n = floor $ n / (log n)
+
