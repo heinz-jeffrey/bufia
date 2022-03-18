@@ -1,67 +1,62 @@
+#!/usr/bin/env python
+"""Samples words of various lengths from an FST.
+This program sample uses Pynini (Gorman 2016, Gorman and Sproat 2021) to sample
+words of various lengths from a FST. It reads an fst file and randomly
+generates n strings whose lengths are between min and max inclusive and writes
+them to standard output."""
 # Program:   fst sampler
-# Copyright: (c) 2021-2022 Jeffrey Heinz
+# Copyright: (c) 2022 Kyle Gorman
 # License:   MIT
 
-# This program sample uses pynini (Gorman 2016, Gorman and Sproat
-# 2021) to sample words of various lengths from a fst
 
-# Usage: python sample.py file.fst n min max
-# It reads an fst file and randomly generates n strings whose lengths
-# are between min and max inclusive and writes them to standard
-# output.
-
-import sys
+import argparse
 import pynini
-
-fstfile  = sys.argv[1]
-n        = int(sys.argv[2])
-lmin     = int(sys.argv[3])
-lmax     = int(sys.argv[4])
-
-the_fsa  = pynini.Fst.read(fstfile)
-symtable = the_fsa.input_symbols()
-i1 = iter(symtable)
-next(i1) # this skips over epsilon which is always
-         # the first entry in the symbol table
-
-a = next(i1) # this is a pair like (1,'a')
-
-def A(s):
-    return pynini.acceptor(s, token_type=symtable)
-
-x = A(a[1])
-zero = x-x
-zero.optimize()
-
-i2 = iter(symtable)
-next(i2) # this skips over epsilon which is always
-            # the first entry in the symbol table
-alph = ''
-for sympair in i2:  # the table entries are pairs of the form (num,symbol)
-    alph = alph + sympair[1]
-
-sigma = zero
-for c in alph:
-    sigma = A(c) | sigma
-sigma.optimize()
-
-fsa_dict = {}
-for i in range(lmin, lmax+1):
-    fsa_dict[i] = pynini.optimize(pynini.intersect(the_fsa, pynini.closure(sigma, i, i)))
-
-def print_string_set(fsa):
-    my_list = []
-    paths = fsa.paths(input_token_type=symtable, output_token_type=symtable)
-    for s in paths.ostrings():
-        print(s)
+from pynini.lib import rewrite
 
 
-# Here is the main call of this script.
+# Seed for reproducability.
+# Set to 0 if repriducability is not desired.
+SEED = 11215
 
-for i in range(lmin, lmax+1):
-    i_fsa = pynini.randgen(fsa_dict[i], npath=n,
-                           seed=0,
-                           select="uniform",
-                           max_length=2147483647,
-                           weighted=False)
-    print_string_set(i_fsa)
+
+def _make_sigma(symbols: pynini.SymbolTable) -> pynini.Fst:
+    # One could of course do this via union.
+    sigma = pynini.Fst()
+    sigma.add_states(2)
+    sigma.set_start(0)
+    for idx, _ in symbols:
+        # Skips over epsilon.
+        if not idx:
+            continue
+        sigma.add_arc(0, pynini.Arc(idx, idx, None, 1))
+    sigma.set_final(1)
+    return sigma
+
+
+def main(args: argparse.Namespace) -> None:
+    fst = pynini.Fst.read(args.fst)
+    # We usually use the convention that if there's just one symbol table,
+    # it's the output table, so I followed that here.
+    symbols = fst.output_symbols()
+    assert symbols, "expected an output symbol table"
+    # Computes sigma so we can control length.
+    sigma = _make_sigma(symbols)
+    # Actually output stuff.
+    for i in range(args.min, args.max + 1):
+        fsa = pynini.intersect(fst, pynini.closure(sigma, i, i)).optimize()
+        rand_fsa = pynini.randgen(fsa, npath=args.n, seed=SEED)
+        for string in rewrite.lattice_to_strings(rand_fsa, token_type=symbols):
+            print(string)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("fst", help="input FST file")
+    parser.add_argument("n", type=int, help="number of strings to generate per length")
+    parser.add_argument(
+        "min", type=int, help="minimum path length (inclusive)"
+    )
+    parser.add_argument(
+        "max", type=int, help="maximum path length (inclusive)"
+    )
+    main(parser.parse_args())
