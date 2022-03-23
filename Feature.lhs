@@ -8,7 +8,7 @@
 
 > module Feature where
 
-The Feature System is the main object here. 
+The Feature System is the main object here.
 
 > import Base
 > import qualified Table as Table
@@ -53,7 +53,7 @@ Elements are feature-value pairs.
 > hreadElt (x:xs) = eltFromPair (xs,[x])
 
 We will encode all elements as integers internally in the feature
-system.  
+system.
 
 A feature system is basically a collection of
 compiled information from a feature table
@@ -69,7 +69,7 @@ compiled information from a feature table
 
 >                  symMap   :: IntMap IntSet,
 
-                    maps each symbol to a set of elements 
+                    maps each symbol to a set of elements
                     symbol → set elt
 
 >                  classMap :: IntMap IntSet,
@@ -87,10 +87,28 @@ compiled information from a feature table
 >                } deriving (Eq, Show, Read)
 
 
-> ofTable :: Table
+> getfeats :: Maybe [String] -- keeplist
+>          -> Maybe [String] -- droplist
+>          -> [String] -- featurelist
+>          -> [String]
+
+> getfeats Nothing Nothing flist = flist
+> getfeats (Just xs) Nothing flist = filter (`elem` xs) flist
+> getfeats Nothing (Just xs) flist = filter (\x -> not (elem x xs)) flist
+> getfeats _ _ _ = error "ofTable: only one of keeplist/droplist to be used"
+
+
+> ofTable :: Maybe [String]
+>         -> Maybe [String]
+>         -> Table
 >         -> Sys
 
-> ofTable t =
+If the keeplist is Nothing AND if the droplist is Nothing
+Then all features in the featuretable are used.
+If both are Justs then an error is given
+Otherwise only the ones in Just are used.
+
+> ofTable keeplist droplist t =
 >   Sys
 >   { symbols  = syms,
 >     features = feats,
@@ -101,13 +119,16 @@ compiled information from a feature table
 >     unifyMap = makeUnifyMap elts clmap
 >   }
 >   where syms  = Table.colNames t
->         feats = Table.rowNames t
+>         feats = getfeats keeplist droplist (Table.rowNames t)
 >         vals  = Table.values t
->         elts  = makeElts compare feats vals   -- have to make compare be an argument to ofTable
+>         elts  = makeElts compare feats vals
 >         clmap = makeClassMap syms elts t
 
-> hread :: String -> Sys
-> hread = ofTable . Table.hread
+The first argument of hread is a list of features to drop from the
+full tables of features.
+
+> hread :: Maybe [String] -> Maybe [String] -> String -> Sys
+> hread keeplist droplist = ofTable keeplist droplist . Table.hread
 
 > makeElts :: (Elt -> Elt -> Ordering)
 >          -> [String] -> [String] -> [Elt]
@@ -121,7 +142,7 @@ compiled information from a feature table
 >           -> (String,String,String)
 >           -> IntMap IntSet
 
-> addSymElt ss es m (s,f,v) = 
+> addSymElt ss es m (s,f,v) =
 >   IntMap.insertWith IntSet.union s_i (IntSet.singleton e_i) m
 >   where e_i = encode es $ makeElt f v
 >         s_i = encode ss s
@@ -139,7 +160,7 @@ compiled information from a feature table
 >   IntMap.insertWith IntSet.union e_i (IntSet.singleton s_i) m
 >   where e_i = encode es (makeElt f v)
 >         s_i = encode ss s
-  
+
 > makeClassMap :: [Symbol] -> [Elt]
 >              -> Table
 >              -> IntMap IntSet
@@ -186,7 +207,7 @@ otherwise
 >   | otherwise = Map.insert newBundle intersection m'
 >   where intersection = IntSet.intersection d d'
 >         newBundle = IntSet.insert k' k
->        
+>
 
 foldrWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
 
@@ -194,7 +215,7 @@ foldrWithKey :: (k -> a -> b -> b) -> b -> Map k a -> b
 > addToBundles classMap map = Map.foldrWithKey
 >                             (\k d m -> IntMap.foldrWithKey (insertMapMaybe k d) m classMap)
 >                             Map.empty
->                             map 
+>                             map
 >
 
 > makeNCMap :: Sys -> Map IntSet IntSet

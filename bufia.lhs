@@ -36,12 +36,15 @@
 > main :: IO ()
 > main = uncurry act =<< compilerOpts =<< getArgs
 
--- There are exactly two necessary arguments: the data file and the feature file.
+There are exactly two necessary arguments:
+the data file and the featurefile.
 
 > act :: Options -> [String] -> IO ()
 > act opts files
 >     | optShowVersion opts          = printVersion
 >     | optShowUsage opts            = printUsage
+>     | opt_keep opts /= Nothing
+>       && opt_drop opts /= Nothing  = printUsage >> exitFailure
 >     | opt_a opts > 2
 >       || opt_a opts < 0
 >       || opt_k opts < 1
@@ -53,16 +56,17 @@
 >     | otherwise                    = do
 >         wStr <- readFile (files !! 0)
 >         fStr <- readFile (files !! 1)
->         let sys    = Feature.hread fStr
->             newsys = (Feature.adjustSys (opt_f opts)) sys
+>         let sys     = Feature.hread (opt_keep opts) (opt_drop opts) fStr
+>             newsys  = (Feature.adjustSys (opt_f opts)) sys
 >           in putStrLn . Struc.setHshow newsys
->              $ learn wStr newsys opts 
+>              $ learn wStr newsys opts
 >     where printUsage = putStr $ usageInfo usageHeader options
 
 
 > compilerOpts :: [String] -> IO (Options, [String])
 > compilerOpts argv
->     = case getOpt RequireOrder options argv   -- replace RequireOrder with Permute ?
+>     = case getOpt RequireOrder options argv
+>       -- replace RequireOrder with Permute ?
 >       of (o, n, []  ) -> return (foldl (flip id) defaultOptions o, n)
 >          (_, _, errs) -> ioError . userError $
 >                          concat errs ++ usageInfo usageHeader options
@@ -71,7 +75,7 @@
 > usageHeader = "Usage: bufia [OPTIONS...] wordfile featurefile"
 
 > printVersion :: IO ()
-> printVersion = putStrLn "Version 1.0"
+> printVersion = putStrLn "Version 1.1"
 
 > data Options = Options
 >   {optShowVersion   :: Bool
@@ -83,6 +87,8 @@
 >    , opt_m          :: Maybe Int
 >    , opt_b          :: Bool
 >    , opt_order      :: Order
+>    , opt_keep       :: Maybe [String]
+>    , opt_drop       :: Maybe [String]
 >   } deriving Show
 
 > defaultOptions :: Options
@@ -96,6 +102,8 @@
 >                  , opt_m             = Nothing
 >                  , opt_b             = True
 >                  , opt_order         = Succ
+>                  , opt_keep          = Nothing -- Nothing here means keep all
+>                  , opt_drop          = Nothing -- Nothing here means drop none
 >                  }
 
 > options :: [OptDescr (Options -> Options)]
@@ -136,12 +144,25 @@
 >                 "Bool"
 >         )
 >         "If 'True' then boundaries '#' are added to all words (default True)"
->       , Option ['o'] ["order"]
+>       , Option ['o'] []
 >         (ReqArg (\f opts ->
 >                  opts { opt_order = orderOfStr f })
 >                 "Order"
 >         )
 >         "the order of the word model: 'succ' or 'prec'"
+>       , Option [] ["keep"]
+>         (ReqArg (\f opts ->
+>                  opts { opt_keep = Just (read f :: [String]) })
+>                 "[String]"
+>         )
+>         "a list of features to keep : '[\"f1\",\"f2\",\"f3\"]' (default keep all; incompatible with --drop)"
+>       , Option [] ["drop"]
+>         (ReqArg (\f opts ->
+>                  opts { opt_drop = Just (read f :: [String]) })
+>                 "[String]"
+>         )
+>         "a list of features to drop : '[\"f1\",\"f2\",\"f3\"]' (default drop none; incompatible with --keep)"
+
 >       , Option ['h','?'] []
 >         (NoArg (\opts -> opts { optShowUsage = True }))
 >         "show this help"
@@ -189,19 +210,19 @@
 
 >       learn' :: Queue -> (Set [String]) -> Set Struc -> Set Struc -> Set Struc
 >       learn' !queue !negData !visited !constraints
->         | Queue.isEmpty queue                                                            --(1)
+>         | Queue.isEmpty queue                                                         --(1)
 >           || Struc.size struc > k
 >           || Just (Set.size constraints) == m = constraints
->         | struc >::> constraints = learn' qs negData visited constraints                 --(2)
->         | struc <::< pd = learn' nextQ negData (Set.insert struc visited) constraints    --(3)
->         | a == 0 = learn' qs negData  visited (Set.insert struc constraints)             --(4)
->         | a == 1                                                                         --(5)
+>         | struc >::> constraints = learn' qs negData visited constraints              --(2)
+>         | struc <::< pd = learn' nextQ negData (Set.insert struc visited) constraints --(3)
+>         | a == 0 = learn' qs negData visited (Set.insert struc constraints)           --(4)
+>         | a == 1                                                                      --(5)
 >           && not (Set.isSubsetOf strucExt negData) =
->           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints)  
->         | a == 2                                                                         --(6)
+>           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints)
+>         | a == 2                                                                      --(6)
 >           && zeroIntersect strucExt negData =
->           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints) 
->         | otherwise = learn' nextQ negData (Set.insert struc visited) constraints        --(7)
+>           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints)
+>         | otherwise = learn' nextQ negData (Set.insert struc visited) constraints     --(7)
 >         where
 >           (struc,qs) = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited
