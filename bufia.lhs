@@ -6,7 +6,7 @@
 > This program implements BUFIA (Chandlee et al. 2019)
 > for models of words that use either successor or precedence
 > for order, and represent symbols with sets of properties
-> (e.g. phonological features) 
+> (e.g. phonological features)
 >
 > -}
 
@@ -163,11 +163,11 @@
 >   let ord = opt_order opts
 >       k   = opt_k opts
 >       n   = opt_n opts
->       a   = opt_a opts    
+>       a   = opt_a opts
 >       m   = opt_m opts
 >       b   = opt_b opts
 >       pd :: Set Struc          -- positive data
->       pd  = (Set.fromList                         
+>       pd  = (Set.fromList
 >               . List.map (Struc.ofWord sys)
 >               . reduceWords ord k
 >               . List.map (addwbs b)
@@ -181,7 +181,7 @@
 >       filterf Succ ws x = any (\w -> w `List.isInfixOf` x) ws
 >       nextGreaterThan :: Struc -> Set Struc
 >       nextGreaterThan = Struc.nextGreater' sys n
->       (<:<) = Struc.isLessThan ord                
+>       (<:<) = Struc.isLessThan ord
 >       (<::<) x ys = any (\y -> x <:< y) ys
 >       (>::>) x ys = any (\y -> y <:< x) ys
 
@@ -192,16 +192,16 @@
 >         | Queue.isEmpty queue                                                            --(1)
 >           || Struc.size struc > k
 >           || Just (Set.size constraints) == m = constraints
->         | struc >::> constraints = learn' qs negData visited constraints             --(2)
->         | struc <::< pd = learn' nextQ negData (Set.insert struc visited) constraints --(3)
->         | a == 0 = learn' qs negData  visited (Set.insert struc constraints)          --(4)
+>         | struc >::> constraints = learn' qs negData visited constraints                 --(2)
+>         | struc <::< pd = learn' nextQ negData (Set.insert struc visited) constraints    --(3)
+>         | a == 0 = learn' qs negData  visited (Set.insert struc constraints)             --(4)
 >         | a == 1                                                                         --(5)
 >           && not (Set.isSubsetOf strucExt negData) =
 >           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints)  
 >         | a == 2                                                                         --(6)
 >           && zeroIntersect strucExt negData =
 >           learn' qs (Set.union negData strucExt) visited (Set.insert struc constraints) 
->         | otherwise = learn' nextQ negData (Set.insert struc visited) constraints     --(7)
+>         | otherwise = learn' nextQ negData (Set.insert struc visited) constraints        --(7)
 >         where
 >           (struc,qs) = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited
