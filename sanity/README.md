@@ -28,6 +28,7 @@ Ludibrium has two words "i i" and "a a".
 ## Feature system for Ludibrium 1
 
 |      | i | u | e | o | a |
+|------|---|---|---|---|---|
 | back | - | + | - | + | - |
 | low  | - | - | - | - | + |
 | high | + | + | - | - | - |
