@@ -36,7 +36,7 @@ Ludibrium has two words "i i" and "a a".
 
 # Parupa
 
-Parupa is the artificial language introduced by [Mayer (2020)](https://doi:10.1017/S0952675720000056).
+Parupa is the artificial language introduced by Mayer (2020).
 
 > Connor Mayer. An algorithm for learning phonological classes from
 > distributional similarity.  Phonology 37 (2020)
