@@ -1,0 +1,55 @@
+#
+# Parupa.plebby
+#
+# Parupa is an artificial language from Mayer (2020)
+
+# Connor Mayer. An algorithm for learning phonological classes from
+# distributional similarity.  Phonology 37 (2020) 91-131.
+# doi:10.1017/S0952675720000056
+
+# Vowels
+
+= high  {/i, /u}
+= mid   {/e, /o}
+= front {/i, /e}
+= back  {/u, /o}
+
+= V {high, mid, /a}
+
+# Consonants
+
+= ovl {/p, /t, /k}
+= ovd {/b, /d, /g}
+= pb  {/p, /b}
+= C   {ovl, ovd, /r}
+
+# CV Constraints
+
+# no CC clusters (3a)
+# no VV clusters (3a)
+# no C-final words (3a)
+# words begin with p or b (3c)
+# no mid vowel after ptk (3di)
+# no high vowel after bdg (3dii)
+
+= CV /\{¬⟨C C⟩, ¬⟨V V⟩, ¬|%<C>, %|<pb>, ¬<ovl mid>, ¬<ovd high>}
+
+# # Vowel Harmony
+# no back vowels anywhere after front vowel (3b)
+# no front vowels anywhere after back vowel (3b)
+
+= VH ¬⋁{ ⟨front, back⟩, ⟨back, front⟩ }
+
+# # Putting them all in Parupa
+
+= parupa /\{ CV, VH }
+
+
+# Writing the Parupa in att format
+
+:writeatt "parupa.att" "ins" "outs" parupa
+
+# To convert parupa.att to a binary fst file
+# run this command from the command line
+# (must have openfst installed)
+# fstcompile --isymbols=ins --osymbols=outs --keep_isymbols --keep_osymbols parupa.att parupa.fst
