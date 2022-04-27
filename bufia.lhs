@@ -226,7 +226,7 @@ the data file and the featurefile.
 >         where
 >           (struc,qs) = Queue.pop queue
 >           nextStrucs = Set.difference (nextGreaterThan struc) visited
->           nextQ      = Queue.pushMany (Set.toList nextStrucs) qs
+>           nextQ      = Queue.pushMany nextStrucs qs
 >           strucExt   = Struc.extension ord sys k struc
 >     in learn' q0 Set.empty Set.empty Set.empty
 
