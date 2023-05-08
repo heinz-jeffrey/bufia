@@ -273,7 +273,7 @@ We lift changeStructure to change a wordlist to a set of structures
 >      else nextStrucs
 
  
-`extension ord sys k x` gives the set of words of size k that match struc x. 
+`extension ord sys k x` gives the set of words of size k that match struc x.
 
 > extension :: Order -> Sys -> Int -> Struc -> Set [Symbol]
 > extension ord sys k x
