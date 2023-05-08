@@ -42,14 +42,14 @@
 >         gStr <- readFile (files !! 1)
 >         wStr <- readFile (files !! 2)
 >         let ord    = opt_order opts
->             sys    = Feature.hread fStr
+>             sys    = Feature.hread Nothing Nothing fStr
 >             newsys = (Feature.adjustSys (opt_f opts)) sys
 >             grm    = Struc.setHread newsys gStr
 >           in ( putStrLn
 >              . intercalate "\n"
 >              . map (showEval newsys ord)
 >              . map (eval newsys ord grm)
->              . map words 
+>              . map words
 >              . lines) wStr
 >     where printUsage = putStr $ usageInfo usageHeader options
 

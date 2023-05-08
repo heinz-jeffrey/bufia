@@ -6,7 +6,7 @@
 > This program implements BUFIA (Chandlee et al. 2019)
 > for models of words that use either successor or precedence
 > for order, and represent symbols with sets of properties
-> (e.g. phonological features) 
+> (e.g. phonological features)
 >
 > -}
 
